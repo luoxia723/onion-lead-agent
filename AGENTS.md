@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.2`，来源提交 `1bdae5f9c70d69deecd04457ab2490f0fea56390`。本仓库不是Skill源码owner；`AGENTS.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.3`，来源提交 `59ed015b7f41334b0d179ac4610ce3bcb755efbc`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
@@ -30,7 +30,7 @@
 
 ## 文件所有权
 
-- 系统维护区：`AGENTS.md`、`README.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`、`VERSION`、`发行信息.json`、`角色清单.json`；
+- 系统维护区：`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`、`VERSION`、`发行信息.json`、`角色清单.json`；
 - 用户工作区：`工作区/输入/`、`工作区/产物/`、`工作区/草稿/`、`工作区/审核/`、`工作区/缓存/`和`.runtime/`；
 - 用户工作区被Git忽略，更新不得进入这些目录；
 - API密钥、OAuth Token、数据库连接、SSH私钥和对象存储凭据不得写入仓库或产物。

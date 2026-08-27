@@ -10,6 +10,7 @@ from pathlib import Path
 MANAGED_PATHS = (
     "AGENTS.md",
     "README.md",
+    "首次使用.md",
     ".agents",
     "产品资料",
     ".codex",

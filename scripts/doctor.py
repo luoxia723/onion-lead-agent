@@ -21,6 +21,7 @@ SECRET_PATTERNS = (
 MANAGED_PATHS = (
     "AGENTS.md",
     "README.md",
+    "首次使用.md",
     ".agents",
     "产品资料",
     ".codex",
@@ -100,6 +101,10 @@ def main() -> int:
         directory = root / "工作区" / name
         if not directory.is_dir():
             errors.append(f"缺少用户目录：工作区/{name}")
+    if not (root / "首次使用.md").is_file():
+        errors.append("缺少包内首次使用说明")
+    if not (root / "scripts" / "first_run_check.py").is_file():
+        errors.append("缺少首次环境检查脚本")
     dirty = git_managed_dirty(root)
     if dirty:
         errors.append("系统维护区存在本地修改：" + " | ".join(dirty))
