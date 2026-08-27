@@ -13,6 +13,7 @@ description: 当用户要把素材库或当前上传的真人/数字人口播母
 
 ## 运行前读取
 
+- [统一任务产物目录与命名合同](../../references/artifact-layout.md)
 - 使用素材库时读取[HTTP MCP适配](../../references/http-mcp-adapter.md)；
 - [输入与输出合同](references/input-output-contract.md)
 - [业务线、母片与CTA规则](references/business-line-and-cta.md)

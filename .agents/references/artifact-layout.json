@@ -1,0 +1,30 @@
+{
+  "schema_version": "onion_artifact_layout_v1",
+  "timezone": "Asia/Shanghai",
+  "workspace_root": "工作区/产物",
+  "task_id_pattern": "^(EDR|IDR|ECR|ICR|PM|FD|AVC|LVC|AIC|AIMG|VOM|THM)-[0-9]{8}-[0-9]{6}-[0-9a-f]{4}$",
+  "version_pattern": "^v[0-9]{3}$",
+  "phases": [
+    "00_任务",
+    "01_输入",
+    "02_过程",
+    "03_候选",
+    "04_交付",
+    "05_质检",
+    "06_打包"
+  ],
+  "artifact_types": {
+    "EDR": {"skill": "onion-demand-report", "category": "策略报告", "label": "外部需求报告", "primary_extension": "md"},
+    "IDR": {"skill": "onion-internal-demand-report", "category": "策略报告", "label": "内部需求报告", "primary_extension": "md"},
+    "ECR": {"skill": "onion-creative-report", "category": "策略报告", "label": "外部视频创意报告", "primary_extension": "md"},
+    "ICR": {"skill": "onion-internal-creative-report", "category": "策略报告", "label": "内部视频创意报告", "primary_extension": "md"},
+    "PM": {"skill": "onion-purchase-motive", "category": "策略方案", "label": "购买动因与信息屋", "primary_extension": "md"},
+    "FD": {"skill": "onion-function-direction", "category": "策略方案", "label": "产品功能方向卡", "primary_extension": "md"},
+    "AVC": {"skill": "onion-app-video-copy", "category": "内容文案", "label": "APP视频口播文案", "primary_extension": "md"},
+    "LVC": {"skill": "onion-lead-video-copy", "category": "内容文案", "label": "线索视频口播文案", "primary_extension": "md"},
+    "AIC": {"skill": "onion-app-image-copy", "category": "内容文案", "label": "APP图片投放文案", "primary_extension": "md"},
+    "AIMG": {"skill": "onion-app-image", "category": "APP图片", "label": "APP图片", "primary_extension": null},
+    "VOM": {"skill": "onion-voiceover-video-mix", "category": "视频混剪", "label": "纯配音混剪", "primary_extension": "mp4"},
+    "THM": {"skill": "onion-talking-head-video-mix", "category": "视频混剪", "label": "口播主轴混剪", "primary_extension": "mp4"}
+  }
+}

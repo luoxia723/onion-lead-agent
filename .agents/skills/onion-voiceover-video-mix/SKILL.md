@@ -11,6 +11,7 @@ description: 当用户已经选定并确认一条 APP 或线索正式口播文�
 
 ## 运行前读取
 
+- [统一任务产物目录与命名合同](../../references/artifact-layout.md)
 - 使用素材库时读取[HTTP MCP适配](../../references/http-mcp-adapter.md)；
 - [输入、输出与授权合同](references/input-output-contract.md)
 - [配音、配画与渲染规则](references/mix-rules.md)

@@ -13,5 +13,6 @@
     "onion-talking-head-video-mix",
     "onion-voiceover-video-mix"
   ],
-  "workflow_contract_sha256": "79a1667a0a461f4064960651708dd377fe3b0d77da638833ce9fdc477ee4c8d2"
+  "workflow_contract_sha256": "79a1667a0a461f4064960651708dd377fe3b0d77da638833ce9fdc477ee4c8d2",
+  "artifact_contract_sha256": "3d123f245d64eb84986a6fc536d1522cd2a67e26ca79e9472a3951d93245c7d9"
 }

@@ -105,6 +105,12 @@ def main() -> int:
             errors.append("角色清单缺少有效工作流合同哈希")
         if role_workflow_hash != release_workflow_hash:
             errors.append("角色清单与发行信息的工作流合同哈希不一致")
+        role_artifact_hash = str(role.get("artifact_contract_sha256") or "")
+        release_artifact_hash = str(release.get("artifact_contract_sha256") or "")
+        if not re.fullmatch(r"[0-9a-f]{64}", role_artifact_hash):
+            errors.append("角色清单缺少有效产物目录合同哈希")
+        if role_artifact_hash != release_artifact_hash:
+            errors.append("角色清单与发行信息的产物目录合同哈希不一致")
         agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")
         if "## Skill 路由与上下文" not in agents_text:
             errors.append("AGENTS缺少Skill路由与上下文")
@@ -130,6 +136,10 @@ def main() -> int:
         errors.append("缺少包内首次使用说明")
     if not (root / "scripts" / "first_run_check.py").is_file():
         errors.append("缺少首次环境检查脚本")
+    if not (root / "scripts" / "artifact_workspace.py").is_file():
+        errors.append("缺少统一产物目录脚本")
+    if not (root / ".agents" / "references" / "artifact-layout.json").is_file():
+        errors.append("缺少统一产物目录合同")
     dirty = git_managed_dirty(root)
     if dirty:
         errors.append("系统维护区存在本地修改：" + " | ".join(dirty))
