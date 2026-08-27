@@ -1,0 +1,13 @@
+interface:
+  display_name: "纯配音混剪"
+  short_description: "使用素材库真实片段和短时源把确认口播制作成纯配音视频"
+  default_prompt: "使用 $onion-voiceover-video-mix 把已确认口播制作成纯配音混剪视频。"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "onion-materials"
+      description: "搜索配画片段、回查稳定素材ID并取得火山TOS短时源"
+      transport: "streamable_http"
+      url: "https://materials-mcp.guanghexinzhi.cn/mcp"
+policy:
+  allow_implicit_invocation: true

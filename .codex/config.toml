@@ -1,0 +1,13 @@
+# 由主仓库生成。项目必须在Codex中标记为可信后才会加载。
+[mcp_servers.onion-agent]
+url = "https://agent-mcp.guanghexinzhi.cn/mcp"
+auth = "oauth"
+required = true
+scopes = [
+  "intelligence:external:read",
+  "intelligence:internal-performance:read",
+  "materials:read",
+  "generation:use"
+]
+startup_timeout_sec = 20
+tool_timeout_sec = 180

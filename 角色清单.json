@@ -1,0 +1,16 @@
+{
+  "schema_version": "onion_role_workspace_v1",
+  "role": "lead",
+  "display_name": "洋葱线索 Agent",
+  "repository": "onion-lead-agent",
+  "skills": [
+    "Skills/03_内容生成相关/onion-lead-video-copy",
+    "Skills/03_内容生成相关/onion-voiceover-video-mix",
+    "Skills/03_内容生成相关/onion-talking-head-video-mix"
+  ],
+  "resolved_skill_names": [
+    "onion-lead-video-copy",
+    "onion-talking-head-video-mix",
+    "onion-voiceover-video-mix"
+  ]
+}

@@ -1,0 +1,13 @@
+interface:
+  display_name: "口播主轴混剪"
+  short_description: "统一制作APP或线索真人/数字人口播主轴混剪视频"
+  default_prompt: "使用 $onion-talking-head-video-mix 校验业务线与CTA，并为口播母片完成混剪。"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "onion-materials"
+      description: "回查口播母片时间轴、搜索静音配画并取得火山TOS短时源"
+      transport: "streamable_http"
+      url: "https://materials-mcp.guanghexinzhi.cn/mcp"
+policy:
+  allow_implicit_invocation: true
