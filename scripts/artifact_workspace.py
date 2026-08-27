@@ -252,14 +252,46 @@ def version_paths(task_root: Path, version: str, contract: dict[str, Any]) -> di
     return {phase: str(root / phase) for phase in contract["phases"]}
 
 
-def create_version(task_root: Path, version: str, contract: dict[str, Any], *, title: str, business_line: str | None) -> dict[str, Any]:
+def safe_business_text(value: str, *, fallback: str = "未命名", max_length: int = 64) -> str:
+    text = re.sub(r'[\\/:*?"<>|\r\n\t]+', "-", value.strip())
+    text = re.sub(r"\s+", "", text)
+    text = re.sub(r"[-_]{2,}", "_", text).strip(" .-_")
+    return (text or fallback)[:max_length].rstrip(" .-_") or fallback
+
+
+def readable_stem(title: str, label: str, business_line: str | None) -> str:
+    prefix = {"app": "APP", "lead": "线索"}.get(business_line or "", "")
+    parts = [value for value in (prefix, safe_business_text(title), label) if value]
+    return "_".join(parts)
+
+
+def available_task_root(parent: Path, base_name: str) -> Path:
+    candidate = parent / base_name
+    if not candidate.exists():
+        return candidate
+    for number in range(2, 100):
+        candidate = parent / f"{base_name}_{number:02d}"
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError("同名业务任务目录过多，请使用更具体的业务主题")
+
+
+def create_version(
+    task_root: Path,
+    version: str,
+    contract: dict[str, Any],
+    *,
+    task_id: str,
+    title: str,
+    business_line: str | None,
+) -> dict[str, Any]:
     paths = version_paths(task_root, version, contract)
     for path in paths.values():
         Path(path).mkdir(parents=True, exist_ok=False)
     now = datetime.now(contract_timezone(contract["timezone"])).isoformat(timespec="seconds")
     manifest = {
         "schema_version": "onion_artifact_task_version_v1",
-        "task_id": task_root.name,
+        "task_id": task_id,
         "version": version,
         "title": title,
         "business_line": business_line,
@@ -281,14 +313,29 @@ def create_task(args: argparse.Namespace) -> dict[str, Any]:
     now = datetime.now(contract_timezone(contract["timezone"]))
     date_dir = now.strftime("%Y-%m-%d")
     task_id = f"{args.code}-{now.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(2)}"
-    task_root = root / contract["workspace_root"] / date_dir / info["category"] / task_id
+    file_stem = readable_stem(args.title, info["label"], args.business_line)
+    directory_base = f"{file_stem}_{now.strftime('%H%M%S')}"
+    task_root = available_task_root(
+        root / contract["workspace_root"] / date_dir / info["category"],
+        directory_base,
+    )
     task_root.mkdir(parents=True, exist_ok=False)
-    version = create_version(task_root, "v001", contract, title=args.title, business_line=args.business_line)
+    version = create_version(
+        task_root,
+        "v001",
+        contract,
+        task_id=task_id,
+        title=args.title,
+        business_line=args.business_line,
+    )
     index = {
         "schema_version": "onion_artifact_task_index_v1",
         "task_id": task_id,
         "artifact_code": args.code,
         "artifact_label": info["label"],
+        "naming_version": 2,
+        "directory_name": task_root.name,
+        "file_stem": file_stem,
         "skill": info["skill"],
         "title": args.title,
         "business_line": args.business_line,
@@ -301,8 +348,15 @@ def create_task(args: argparse.Namespace) -> dict[str, Any]:
     extension = info.get("primary_extension")
     suggested = None
     if extension:
-        suggested = f"{task_id}_{info['label']}_v001.{extension}"
-    return {"task_root": str(task_root), "task_id": task_id, "suggested_primary_file": suggested, **version}
+        suggested = f"{file_stem}_v001.{extension}"
+    return {
+        "task_root": str(task_root),
+        "task_id": task_id,
+        "directory_name": task_root.name,
+        "file_stem": file_stem,
+        "suggested_primary_file": suggested,
+        **version,
+    }
 
 
 def load_index(task_root: Path, contract: dict[str, Any]) -> dict[str, Any]:
@@ -314,8 +368,15 @@ def load_index(task_root: Path, contract: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("任务索引版本无效")
     if not re.fullmatch(contract["task_id_pattern"], str(value.get("task_id") or "")):
         raise RuntimeError("任务ID不符合合同")
-    if value["task_id"] != task_root.name:
-        raise RuntimeError("任务目录名与任务ID不一致")
+    if value.get("naming_version") == 2:
+        if value.get("directory_name") != task_root.name:
+            raise RuntimeError("任务目录名与任务索引不一致")
+        if not str(value.get("file_stem") or "").strip():
+            raise RuntimeError("任务索引缺少业务可读文件名")
+    else:
+        if value["task_id"] != task_root.name:
+            raise RuntimeError("旧任务目录名与任务ID不一致")
+        value.setdefault("file_stem", f"{value['task_id']}_{value['artifact_label']}")
     return value
 
 
@@ -329,13 +390,22 @@ def new_version(args: argparse.Namespace) -> dict[str, Any]:
         task_root,
         version,
         contract,
+        task_id=index["task_id"],
         title=index["title"],
         business_line=index.get("business_line"),
     )
     index["versions"].append(version)
     index["current_version"] = version
     write_json(task_root / "任务索引.json", index)
-    return {"task_root": str(task_root), "task_id": index["task_id"], **result}
+    extension = contract["artifact_types"][index["artifact_code"]].get("primary_extension")
+    suggested = f"{index['file_stem']}_{version}.{extension}" if extension else None
+    return {
+        "task_root": str(task_root),
+        "task_id": index["task_id"],
+        "file_stem": index["file_stem"],
+        "suggested_primary_file": suggested,
+        **result,
+    }
 
 
 def version_manifest(task_root: Path, version: str) -> tuple[Path, dict[str, Any]]:
@@ -385,7 +455,7 @@ def package(args: argparse.Namespace) -> dict[str, Any]:
     if not files:
         raise RuntimeError("04_交付为空，不能打包")
     package_dir = task_root / version / "06_打包"
-    stem = f"{index['task_id']}_{index['artifact_label']}交付包_{version}"
+    stem = f"{index['file_stem']}_交付包_{version}"
     output = package_dir / f"{stem}.zip"
     manifest_path = package_dir / f"{stem}_交付清单.json"
     if output.exists() or manifest_path.exists():
@@ -406,7 +476,7 @@ def package(args: argparse.Namespace) -> dict[str, Any]:
         "version": version,
         "files": entries,
     }
-    root_name = f"{index['task_id']}_{index['artifact_label']}_{version}"
+    root_name = f"{index['file_stem']}_{version}"
     with zipfile.ZipFile(output, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in files:
             archive.write(path, f"{root_name}/{path.relative_to(delivery).as_posix()}")
@@ -442,7 +512,7 @@ def validate(args: argparse.Namespace) -> dict[str, Any]:
         except RuntimeError as error:
             errors.append(str(error))
         delivery_pattern = re.compile(
-            rf"^{re.escape(index['task_id'])}_.+_{re.escape(version)}\.[A-Za-z0-9]+$"
+            rf"^{re.escape(index['file_stem'])}(?:_.+)?_{re.escape(version)}\.[A-Za-z0-9]+$"
         )
         for delivery_file in (version_root / "04_交付").rglob("*"):
             if delivery_file.is_file() and not delivery_pattern.fullmatch(delivery_file.name):
