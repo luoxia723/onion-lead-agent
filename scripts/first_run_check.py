@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import platform
@@ -12,6 +13,14 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+from codex_runtime import resolve_codex_binary
+
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 
 
 EXPECTED_MCP_URL = "https://intel-mcp.guanghexinzhi.cn/agent/mcp"
@@ -46,6 +55,8 @@ def main() -> int:
     args = parse_args()
     root = project_root()
     results: list[dict[str, str]] = []
+    role = json.loads((root / "角色清单.json").read_text(encoding="utf-8"))
+    role_name = str(role.get("role") or "")
 
     version_ok = sys.version_info >= (3, 10)
     add(
@@ -54,13 +65,40 @@ def main() -> int:
         "ok" if version_ok else "error",
         f"{platform.python_version()} ({platform.system()} {platform.machine()})",
     )
+    runtime_venv = root / ".runtime" / "venv"
+    using_project_venv = Path(sys.prefix).resolve() == runtime_venv.resolve()
+    add(
+        results,
+        "项目Python环境",
+        "ok" if using_project_venv else "warn",
+        "正在使用项目.runtime/venv"
+        if using_project_venv
+        else "当前Python可用；建议让Codex运行“初始化项目环境”建立隔离venv",
+    )
 
     git_path = shutil.which("git")
-    add(results, "Git", "ok" if git_path else "warn", git_path or "未在PATH中找到；ZIP试用不受影响，后续自动更新需要Git")
+    git_required = (root / ".git").is_dir()
+    add(
+        results,
+        "Git",
+        "ok" if git_path else "error" if git_required else "warn",
+        git_path or "未在PATH中找到；ZIP可使用，Git仓库Pull需要安装Git",
+    )
     add(results, "Git仓库", "ok" if (root / ".git").is_dir() else "warn", "可以Git拉取更新" if (root / ".git").is_dir() else "当前是ZIP目录；可正常试用，但不能直接Pull")
 
-    codex_path = shutil.which("codex")
-    add(results, "Codex CLI", "ok" if codex_path else "warn", codex_path or "未在PATH中找到；使用Codex桌面端时可忽略")
+    codex_path = resolve_codex_binary(required=False)
+    codex_needed = role_name == "strategy"
+    add(
+        results,
+        "Codex执行器",
+        "ok" if codex_path else "warn" if codex_needed else "ok",
+        str(codex_path)
+        if codex_path
+        else "策略报告的隔离模型任务需要；APP/线索日常任务不依赖Codex CLI",
+    )
+    add(results, "Node.js", "ok", "正式角色流程不需要安装")
+    add(results, "FFmpeg", "ok", "正式视频由统一MCP的火山VOD云端渲染，本地不需要安装")
+    add(results, "本地Python包", "ok", "正式流程只使用Python标准库；Pillow和云厂商SDK不属于首次安装依赖")
 
     required = (
         "AGENTS.md",
@@ -77,7 +115,6 @@ def main() -> int:
     missing = [relative for relative in required if not (root / relative).is_file()]
     add(results, "项目文件", "error" if missing else "ok", "缺少：" + "、".join(missing) if missing else "首次使用、更新和产品事实文件齐全")
 
-    role = json.loads((root / "角色清单.json").read_text(encoding="utf-8"))
     expected = set(role.get("resolved_skill_names", []))
     actual = {path.parent.name for path in (root / ".agents" / "skills").glob("*/SKILL.md")}
     skill_ok = actual == expected and bool(actual)
@@ -85,6 +122,20 @@ def main() -> int:
     if actual != expected:
         detail += f"，缺少={sorted(expected - actual)}，多出={sorted(actual - expected)}"
     add(results, "Skills", "ok" if skill_ok else "error", detail)
+
+    syntax_errors: list[str] = []
+    for base in (root / "scripts", root / ".agents"):
+        for path in base.rglob("*.py"):
+            try:
+                ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            except (OSError, SyntaxError) as error:
+                syntax_errors.append(f"{path.relative_to(root)}:{error}")
+    add(
+        results,
+        "Python脚本语法",
+        "error" if syntax_errors else "ok",
+        "；".join(syntax_errors[:3]) if syntax_errors else "全部可由当前Python解析",
+    )
 
     symlinks = [str(path.relative_to(root)) for path in (root / ".agents").rglob("*") if path.is_symlink()]
     add(results, "Windows/macOS目录兼容", "error" if symlinks else "ok", "未使用符号链接" if not symlinks else "发现符号链接：" + "、".join(symlinks[:5]))
@@ -124,7 +175,7 @@ def main() -> int:
     warn_count = sum(item["status"] == "warn" for item in results)
     payload = {
         "ok": error_count == 0,
-        "role": role.get("role"),
+        "role": role_name,
         "skill_count": len(actual),
         "error_count": error_count,
         "warning_count": warn_count,

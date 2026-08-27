@@ -8,7 +8,9 @@
 
 打开仓库根目录并信任项目后，Codex会自动从`.agents/skills/`发现本角色Skill，并从`.codex/config.toml`读取`onion-agent` MCP地址。使用者只在Codex认证页输入管理员发放的一次性Token；不填任何供应商API Key。
 
-环境检查：直接对Codex说“运行首次环境检查”，或运行 `python scripts/first_run_check.py`。
+第一次打开后直接对Codex说“初始化项目环境”。Codex会按Windows/macOS选择包内脚本，检查Python、Git、项目文件和MCP配置；取得确认后可以安装缺失的Python/Git并创建项目内`.runtime/venv`。Node.js、FFmpeg和云厂商SDK不是正式角色依赖。
+
+只读环境检查：对Codex说“运行首次环境检查”，或运行 `python scripts/first_run_check.py`。
 
 日常只在`工作区/`中放输入、草稿、审核记录和产物。系统目录由主仓库自动更新，不要手工修改。
 

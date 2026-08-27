@@ -51,13 +51,16 @@ def project_root() -> Path:
 def git_managed_dirty(root: Path) -> list[str]:
     if not (root / ".git").exists():
         return []
-    result = subprocess.run(
-        ["git", "status", "--porcelain", "--", *MANAGED_PATHS],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--", *MANAGED_PATHS],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except FileNotFoundError:
+        return ["Git未安装，无法检查系统维护区"]
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
