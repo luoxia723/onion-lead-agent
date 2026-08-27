@@ -19,7 +19,7 @@
 - 画布和输出规格；
 - 当前任务授权。
 
-旁白必须来自Mossland正式回执，或由用户提供已确认的Mossland成品旁白与可核对哈希。本地执行只负责素材取源、画面装配和ffmpeg渲染；不得用系统`Tingting`、`say`或其他临时TTS替代。
+旁白必须来自统一MCP的Mossland正式回执，或由用户提供已确认的Mossland成品旁白与可核对哈希。正式ASR和ffmpeg渲染同样由统一MCP执行；不得用系统`Tingting`、`say`或其他临时TTS替代。
 
 ## 输出
 

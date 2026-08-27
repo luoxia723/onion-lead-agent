@@ -2,16 +2,16 @@
   "schema_version": "onion_role_workspace_release_v1",
   "role": "lead",
   "repository": "onion-lead-agent",
-  "workspace_version": "0.1.0-preview.5",
-  "source_revision": "10e134a320178d56d65a8efa7f3738d5e0da56c8",
-  "generated_at": "2026-08-27T06:21:33Z",
+  "workspace_version": "0.1.0",
+  "source_revision": "982a6ee3b211f43189523462455d4b7552e9f877",
+  "generated_at": "2026-08-27T08:35:05Z",
   "skills": [
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
     "onion-voiceover-video-mix"
   ],
-  "mcp_url": "https://agent-mcp.guanghexinzhi.cn/mcp",
-  "mcp_connection_status": "planned_not_deployed",
+  "mcp_url": "https://intel-mcp.guanghexinzhi.cn/agent/mcp",
+  "mcp_connection_status": "deployed",
   "user_owned_directories": [
     "工作区/输入",
     "工作区/产物",

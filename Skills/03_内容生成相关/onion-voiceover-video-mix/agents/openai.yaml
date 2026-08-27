@@ -5,9 +5,9 @@ interface:
 dependencies:
   tools:
     - type: "mcp"
-      value: "onion-materials"
-      description: "搜索配画片段、回查稳定素材ID并取得火山TOS短时源"
+      value: "onion-agent"
+      description: "统一执行Mossland、Qwen ASR、hybrid素材检索和无字幕渲染"
       transport: "streamable_http"
-      url: "https://materials-mcp.guanghexinzhi.cn/mcp"
+      url: "https://intel-mcp.guanghexinzhi.cn/agent/mcp"
 policy:
   allow_implicit_invocation: true

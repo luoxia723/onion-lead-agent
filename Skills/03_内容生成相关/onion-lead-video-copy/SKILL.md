@@ -11,6 +11,7 @@ description: 当用户要求根据一个已选线索购买动因与信息屋生�
 
 ## 运行前读取
 
+- [统一 OAuth MCP 适配](../../references/http-mcp-adapter.md)
 - [输入与输出合同](references/input-output-contract.md)
 - [体验链与口播规则](references/copy-rules.md)
 - 调用Kimi K3时，将[Kimi K3线索系统提示词](references/kimi-system-prompt.md)作为唯一system消息
@@ -37,7 +38,7 @@ description: 当用户要求根据一个已选线索购买动因与信息屋生�
 5. 有创意报告时只读可用报告的一览和适配结构卡中固定的`口播文案`行、`不能怎样使用`和代表案例；`建议使用位置`只表示口播内部怎样采用，不是多个下游任务。0份、无适配结构或只有风格截图时按原创关系生成，不伪造报告编号。
 6. 每条只保留一个家长问题和一条体验判断链。动画课、诊断、规划、答疑、资料、督学及体验权益可以组合，但每一项都必须继续回答同一问题并写清先后关系。
 7. GPT/Codex只编排Kimi用户消息：放入归一化上下文、数量、逐条创意计划、必要服务/权益事实、事实边界、渠道入口、唯一CTA、前贴状态和来源字段；不提供GPT正文，也不替Kimi写或改正式口播。
-8. 使用`references/kimi-system-prompt.md`作为system消息调用`kimi-k3`。Kimi从零完成体验判断链、口播化、事实回查和完整Markdown输出。调用使用`temperature=1`、关闭思考、不传`reasoning_effort`、`max_tokens=3000`，超时按90至120秒配置；较高输出上限用于容纳网关仍可能返回的reasoning tokens，不代表正文需要写长。
+8. 使用`references/kimi-system-prompt.md`的完整正文作为`system_prompt`，将第7步编排结果作为`user_prompt`，调用统一MCP的`generation_kimi_generate`。用户当前明确要求生成或修改文案时传`approved_in_current_task=true`，并按“任务＋线索输入指纹＋版本”生成幂等Key。网络重试复用原Key；用户明确重生或机器校验后的修复请求使用新版本Key。Kimi从零完成体验判断链、口播化、事实回查和完整Markdown输出；模型、参数和供应商Key由服务端封装。
 9. 正文以35至60秒为软目标，推荐220至300个中文字符、理想240至280个字符；不为时长重复权益、价格或功能。
 10. 运行`scripts/validate_copy.py`检查数量、格式和来源。失败时把机器错误作为修复信息交给Kimi重试一次；GPT/Codex不得静默改写Kimi正文。再次失败则停止并保留失败原因。
 11. 校验通过后停止在人工审核，不生成前贴或成片。
@@ -56,3 +57,4 @@ description: 当用户要求根据一个已选线索购买动因与信息屋生�
 - 没有上传前贴时先文案后前贴；已有前贴时正文承接但不复述，事实不足时不补剧情。
 - 正式输出不包含创意签名、长检查表或逐句交接；混剪按最终正文自行分句。
 - GPT/Codex是上下文编排者，不是本流程的文案作者；Kimi直接生成正式正文和固定Markdown。模型输出仍需人工审核，不能因通过机械校验就视为产品事实已自动证明。
+- 下游不配置`NEW_API_KEY`或直连Kimi网关；统一MCP未发现生成工具或OAuth未完成时停止。

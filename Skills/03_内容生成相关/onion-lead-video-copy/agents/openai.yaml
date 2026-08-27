@@ -1,0 +1,13 @@
+interface:
+  display_name: "线索视频口播文案"
+  short_description: "编排购买动因与体验事实并调Kimi生成线索口播"
+  default_prompt: "使用 $onion-lead-video-copy 根据我选定的线索购买动因与信息屋生成视频口播文案。"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "onion-agent"
+      description: "通过统一OAuth调用Kimi K3生成正式线索口播"
+      transport: "streamable_http"
+      url: "https://intel-mcp.guanghexinzhi.cn/agent/mcp"
+policy:
+  allow_implicit_invocation: true

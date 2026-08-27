@@ -14,6 +14,7 @@ REQUIRED = (
     "source",
     "cta_check",
     "retrieval_mode",
+    "execution_mode",
     "batch_subject_mode",
     "base_video",
     "speech_segments",
@@ -88,6 +89,8 @@ def validate(data: dict) -> list[str]:
         errors.append("cta_timeline_invalid")
     if data.get("retrieval_mode") != "hybrid":
         errors.append("retrieval_mode_invalid")
+    if data.get("execution_mode") != "server_render":
+        errors.append("execution_mode_invalid")
     if data.get("batch_subject_mode") not in {None, "same_speaker_variants", "multiple_speakers"}:
         errors.append("batch_subject_mode_invalid")
     if data.get("publishing_allowed") is not False:
@@ -157,6 +160,19 @@ def validate(data: dict) -> list[str]:
     front = data.get("front_hook")
     if front is not None and front.get("source_audio_mode") != "keep":
         errors.append("front_hook_audio_must_be_kept")
+    subtitles = sorted(data.get("subtitles", []), key=lambda item: item.get("start_ms", 0))
+    previous_subtitle_end = 0
+    for index, subtitle in enumerate(subtitles):
+        start = subtitle.get("start_ms")
+        end = subtitle.get("end_ms")
+        if not str(subtitle.get("text") or "").strip():
+            errors.append(f"subtitle_{index}:text_required")
+        if not _valid_interval(start, end, upper=duration_ms or None):
+            errors.append(f"subtitle_{index}:timeline_invalid")
+        if isinstance(start, int) and start < previous_subtitle_end:
+            errors.append(f"subtitle_{index}:overlap")
+        if isinstance(end, int):
+            previous_subtitle_end = max(previous_subtitle_end, end)
     return errors
 
 

@@ -8,8 +8,9 @@
 
 ```text
 一次冻结范围
-→ 一个程序完成全部 MCP 分页与版本校验
-→ 原始记录写入 .runtime 私有快照
+→ 统一MCP服务器完成全部分页与版本校验
+→ 返回私有快照ZIP、下载并校验SHA-256
+→ 原始记录展开到 .runtime 私有快照
 → 按稳定记录 ID 计算内容哈希和增量
 → 只把本报告需要的紧凑事实送入隔离模型任务
 → 模型只输出语义映射或报告正文
@@ -19,7 +20,7 @@
 ## 强制规则
 
 1. 不允许由外层 Agent 逐页调用 MCP、阅读页面正文后再请求下一页。
-2. 使用 `Skills/scripts/freeze_intelligence_report_input.py`，或使用等价的单次程序化工具编排；程序只向外层返回记录数、页数、SHA、完整度和文件路径。
+2. 固定调用一次`intelligence_freeze_report_input`。服务器只向外层返回记录数、页数、SHA、完整度和快照产物；下载ZIP后用`Skills/scripts/extract_report_input_snapshot.py`校验并展开。下游不配置MCP Bearer Token。
 3. MCP 的 transport envelope、每页 applied filters、重复 scope 和游标不进入模型输入；快照保留每条业务记录全部字段。
 4. 同一个内部完整素材池快照同时供内部需求和内部创意使用；不得为两份报告重复分页。
 5. 模型任务不继承当前长对话。使用只含目标 Skill、直接合同、本次运行参数和紧凑证据包的隔离上下文。
@@ -38,30 +39,20 @@
 
 将旧执行方式迁移到本合同前必须做同输入影子A/B。自由重跑若改变已确认卡片/结构数量、名称、主体或排序，优化不得切换；同输入应先锁定旧报告和语义基线。只有新范围或真实语义增量才允许产生新卡片或结构，并继续通过原Skill校验和人工验收。
 
-## 命令
+## 执行
 
-外部需求：
+外部需求调`intelligence_freeze_report_input(mode=external-demand, report_triggered_at, evidence_start_at, evidence_end_at)`；外部创意改为`mode=external-creative`。内部两份报告共用一次`intelligence_freeze_report_input(mode=internal-complete, statistics_start_date, statistics_end_date)`。
 
-```bash
-MCP配置/情报库MCP/.venv/bin/python \
-  Skills/scripts/freeze_intelligence_report_input.py \
-  --mode external-demand \
-  --report-triggered-at 2026-08-27T02:15:00+08:00 \
-  --evidence-start-at 2026-08-13T05:00:00+08:00 \
-  --evidence-end-at 2026-08-13T06:00:00+08:00 \
-  --output-dir .runtime/策略Agent产物/<日期>/外部需求输入
-```
-
-外部创意使用 `--mode external-creative` 和本次范围。内部两份报告共用：
+工具成功后：
 
 ```bash
-MCP配置/情报库MCP/.venv/bin/python \
-  Skills/scripts/freeze_intelligence_report_input.py \
-  --mode internal-complete \
-  --statistics-start-date 2026-07-27 \
-  --statistics-end-date 2026-08-09 \
-  --output-dir .runtime/策略Agent产物/<日期>/内部共同输入
+python3 Skills/scripts/extract_report_input_snapshot.py \
+  .runtime/<任务>/report-input-snapshot.zip \
+  --expected-sha256 <工具返回的sha256> \
+  --output-dir .runtime/<任务>/冻结输入
 ```
+
+快照ZIP和展开文件都是用户任务运行数据，不进入Git。
 
 ## 增量边界
 

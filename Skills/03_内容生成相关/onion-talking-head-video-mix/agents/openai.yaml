@@ -5,9 +5,9 @@ interface:
 dependencies:
   tools:
     - type: "mcp"
-      value: "onion-materials"
-      description: "回查口播母片时间轴、搜索静音配画并取得火山TOS短时源"
+      value: "onion-agent"
+      description: "统一回查口播母片、搜索配画、上传任务媒体并渲染字幕成片"
       transport: "streamable_http"
-      url: "https://materials-mcp.guanghexinzhi.cn/mcp"
+      url: "https://intel-mcp.guanghexinzhi.cn/agent/mcp"
 policy:
   allow_implicit_invocation: true

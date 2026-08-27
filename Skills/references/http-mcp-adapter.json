@@ -1,170 +1,147 @@
 {
-  "schema_version": "onion_skill_http_mcp_adapter_v1",
+  "schema_version": "onion_skill_http_mcp_adapter_v2",
   "deployment_status": {
-    "local_source": "implemented_and_tested",
-    "production": "deployed_0053_and_intelligence_mcp_20260826T170747Z_9a19b56665cb"
+    "production": "deployed_and_real_e2e_passed"
   },
   "policy": {
     "skills_are_business_authority": true,
     "adapter_is_replaceable": true,
     "allow_additional_tools": true,
     "missing_required_fact": "stop",
-    "business_reads_forbid_direct_database_ssh_or_object_storage": true
+    "business_reads_forbid_direct_database_ssh_or_object_storage": true,
+    "provider_keys_are_server_side_only": true,
+    "paid_generation_requires_current_task_approval_and_idempotency": true
   },
   "assignment": {
-    "token_granularity": "one_token_per_person_per_client_per_server",
-    "skill_declares_server_dependency": true,
-    "role_workspace_distributes_only_assigned_servers": true,
+    "oauth_connection": "one_per_person_per_codex_client",
+    "all_roles_share_same_scopes": true,
+    "role_difference_is_skills_only": true,
     "scope_is_enforced_by_server": true
   },
-  "servers": {
-    "onion-intelligence": {
-      "transport": "streamable_http",
-      "url": "https://intel-mcp.guanghexinzhi.cn/mcp",
-      "contract_version": "intelligence_mcp_v3",
-      "bearer_token_env_var": "ONION_INTELLIGENCE_MCP_TOKEN",
-      "client_header": {
-        "X-Intelligence-Client-Id": "codex"
-      },
-      "tools": [
-        "intelligence_list_report_availability",
-        "intelligence_get_report_scope",
-        "intelligence_list_demand_evidence",
-        "intelligence_list_creative_evidence",
-        "intelligence_search_objects",
-        "intelligence_find_similar_objects",
-        "intelligence_get_material_detail",
-        "intelligence_get_analysis_evidence",
-        "intelligence_query_internal_performance",
-        "intelligence_list_internal_material_evidence",
-        "intelligence_list_internal_complete_material_pool",
-        "intelligence_search_internal_objects"
-      ]
+  "server": {
+    "name": "onion-agent",
+    "transport": "streamable_http",
+    "url": "https://intel-mcp.guanghexinzhi.cn/agent/mcp",
+    "auth": "oauth_2_1_authorization_code_pkce",
+    "contract_versions": {
+      "intelligence": "intelligence_mcp_v3",
+      "materials": "materials_mcp_v2"
     },
-    "onion-materials": {
-      "transport": "streamable_http",
-      "url": "https://materials-mcp.guanghexinzhi.cn/mcp",
-      "contract_version": "materials_mcp_v2",
-      "bearer_token_env_var": "ONION_MATERIALS_MCP_TOKEN",
-      "client_header": {
-        "X-Materials-Client-Id": "codex"
-      },
-      "available_retrieval_modes": [
-        "lexical",
-        "vector",
-        "hybrid"
-      ],
-      "formal_mixing_retrieval_mode": "hybrid",
-      "tools": [
-        "materials_search_speech_masters",
-        "materials_search_segments",
-        "materials_get_segments",
-        "materials_get_speech_master",
-        "materials_prepare_sources"
-      ]
-    }
+    "required_scopes": [
+      "intelligence:external:read",
+      "intelligence:internal-performance:read",
+      "materials:read",
+      "generation:use"
+    ],
+    "tools": [
+      "intelligence_list_report_availability",
+      "intelligence_get_report_scope",
+      "intelligence_list_demand_evidence",
+      "intelligence_list_creative_evidence",
+      "intelligence_search_objects",
+      "intelligence_find_similar_objects",
+      "intelligence_get_material_detail",
+      "intelligence_get_analysis_evidence",
+      "intelligence_query_internal_performance",
+      "intelligence_list_internal_material_evidence",
+      "intelligence_list_internal_complete_material_pool",
+      "intelligence_search_internal_objects",
+      "intelligence_freeze_report_input",
+      "materials_search_speech_masters",
+      "materials_search_segments",
+      "materials_get_segments",
+      "materials_get_speech_master",
+      "materials_prepare_sources",
+      "generation_upload_media",
+      "generation_kimi_generate",
+      "generation_kie_image",
+      "generation_prepare_image_delivery",
+      "generation_moss_tts",
+      "generation_qwen_asr",
+      "generation_render_voiceover_video",
+      "generation_render_talking_head_video",
+      "generation_get_output"
+    ]
+  },
+  "generation_contract": {
+    "approval_field": "approved_in_current_task",
+    "idempotency_field": "idempotency_key",
+    "retry_reuses_same_key": true,
+    "new_key_requires_deliberate_new_user_intent": true,
+    "outputs_are_short_lived_and_sha256_verified": true
   },
   "skill_routes": {
     "onion-demand-report": {
-      "server": "onion-intelligence",
-      "required_scopes": [
-        "intelligence:external:read"
-      ],
-      "required_tools": [
+      "tools": [
+        "intelligence_freeze_report_input",
         "intelligence_list_report_availability",
         "intelligence_get_report_scope",
         "intelligence_list_demand_evidence",
         "intelligence_get_analysis_evidence",
         "intelligence_get_material_detail"
-      ],
-      "optional_tools": [
-        "intelligence_search_objects",
-        "intelligence_find_similar_objects"
       ]
     },
     "onion-creative-report": {
-      "server": "onion-intelligence",
-      "required_scopes": [
-        "intelligence:external:read"
-      ],
-      "required_tools": [
+      "tools": [
+        "intelligence_freeze_report_input",
         "intelligence_list_report_availability",
         "intelligence_get_report_scope",
         "intelligence_list_creative_evidence",
-        "intelligence_get_material_detail"
-      ],
-      "optional_tools": [
-        "intelligence_get_analysis_evidence",
-        "intelligence_search_objects",
-        "intelligence_find_similar_objects"
+        "intelligence_get_material_detail",
+        "intelligence_get_analysis_evidence"
       ]
     },
     "onion-internal-demand-report": {
-      "server": "onion-intelligence",
-      "required_scopes": [
-        "intelligence:external:read",
-        "intelligence:internal-performance:read"
-      ],
-      "required_tools": [
+      "tools": [
+        "intelligence_freeze_report_input",
         "intelligence_list_report_availability",
         "intelligence_list_internal_complete_material_pool",
         "intelligence_list_internal_material_evidence",
         "intelligence_search_internal_objects"
-      ],
-      "current_gap": null
+      ]
     },
     "onion-internal-creative-report": {
-      "server": "onion-intelligence",
-      "required_scopes": [
-        "intelligence:external:read",
-        "intelligence:internal-performance:read"
-      ],
-      "required_tools": [
+      "tools": [
+        "intelligence_freeze_report_input",
         "intelligence_list_report_availability",
         "intelligence_list_internal_complete_material_pool",
         "intelligence_list_internal_material_evidence",
         "intelligence_search_internal_objects"
-      ],
-      "current_gap": null
+      ]
+    },
+    "onion-app-video-copy": {
+      "tools": ["generation_kimi_generate"]
+    },
+    "onion-lead-video-copy": {
+      "tools": ["generation_kimi_generate"]
+    },
+    "onion-app-image": {
+      "tools": ["generation_upload_media", "generation_kie_image", "generation_prepare_image_delivery", "generation_get_output"]
     },
     "onion-voiceover-video-mix": {
-      "server": "onion-materials",
       "required_retrieval_mode": "hybrid",
-      "current_gap": null,
-      "required_scopes": [
-        "materials:read"
-      ],
-      "required_tools": [
+      "tools": [
+        "generation_moss_tts",
+        "generation_qwen_asr",
+        "generation_upload_media",
         "materials_search_segments",
         "materials_get_segments",
-        "materials_prepare_sources"
+        "materials_prepare_sources",
+        "generation_render_voiceover_video",
+        "generation_get_output"
       ]
     },
     "onion-talking-head-video-mix": {
-      "server": "onion-materials",
       "required_retrieval_mode": "hybrid",
-      "current_gap": null,
-      "required_scopes": [
-        "materials:read"
-      ],
-      "required_tools": [
+      "tools": [
         "materials_search_speech_masters",
-        "materials_search_segments",
-        "materials_get_segments",
         "materials_get_speech_master",
-        "materials_prepare_sources"
-      ]
-    },
-    "onion-material-ingest": {
-      "server": "onion-materials",
-      "usage": "post_write_readback_only",
-      "required_scopes": [
-        "materials:read"
-      ],
-      "required_tools": [
         "materials_search_segments",
         "materials_get_segments",
-        "materials_prepare_sources"
+        "materials_prepare_sources",
+        "generation_upload_media",
+        "generation_render_talking_head_video",
+        "generation_get_output"
       ]
     }
   }

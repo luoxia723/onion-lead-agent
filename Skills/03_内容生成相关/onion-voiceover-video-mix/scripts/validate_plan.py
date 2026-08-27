@@ -23,7 +23,7 @@ def validate(data: dict) -> list[str]:
         errors.append("composition_mode_invalid")
     if data.get("retrieval_mode") != "hybrid":
         errors.append("retrieval_mode_invalid")
-    if data.get("execution_mode") not in {"local_render", "formal"}:
+    if data.get("execution_mode") != "server_render":
         errors.append("execution_mode_invalid")
     if "subtitles" in data:
         errors.append("subtitles_forbidden")
