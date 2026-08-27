@@ -2,9 +2,9 @@
   "schema_version": "onion_role_workspace_release_v1",
   "role": "lead",
   "repository": "onion-lead-agent",
-  "workspace_version": "0.1.7",
-  "source_revision": "5d99707f47827e9b348d5c042f3cb5467832c849",
-  "generated_at": "2026-08-27T18:20:28Z",
+  "workspace_version": "0.1.8",
+  "source_revision": "a6b933774b2a0fdaddb04801bc1e6b20a041d52f",
+  "generated_at": "2026-08-27T18:38:10Z",
   "skills": [
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",

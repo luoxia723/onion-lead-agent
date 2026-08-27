@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.7`，来源提交 `5d99707f47827e9b348d5c042f3cb5467832c849`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.8`，来源提交 `a6b933774b2a0fdaddb04801bc1e6b20a041d52f`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
@@ -39,7 +39,7 @@
 - `04_交付`只放正式可采用文件，文件名必须包含任务ID、产物名称和`vNNN`；
 - `05_质检`保存自动与人工审核，`06_打包`保存ZIP及交付清单；
 - `.runtime/<任务ID>/`只放短时下载、模型批次和可重建缓存，不得作为正式交付；
-- 完成后运行`finalize`和`validate`。用户要求ZIP时运行`package`；APP图片专用打包仍可使用图片Skill脚本，但输出名、目录和ZIP内`交付清单.json`必须符合统一合同。
+- 完成后运行`finalize`和`validate`。Markdown会检查文内锚点、相对文档和工作台URL；正式报告含工作台链接时还必须运行`check-links --online-workbench`核对详情API身份。用户要求ZIP时运行`package`；APP图片专用打包仍可使用图片Skill脚本，但输出名、目录和ZIP内`交付清单.json`必须符合统一合同。
 
 ## 首次初始化
 

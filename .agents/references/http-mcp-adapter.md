@@ -54,7 +54,7 @@
 
 先用 `intelligence_list_report_availability` 确认共同周期，再共用一份完整分页 `intelligence_list_internal_complete_material_pool` 冻结快照。第一页冻结 `dataset_version`，后续页必须一致；版本变化时从第一页重取。`intelligence_list_internal_material_evidence` 只复核高表现交集，不替代完整池。
 
-`dashboard_path` 必须解析为 `https://toufang-ai.guanghexinzhi.cn/content-dashboard?...` 绝对地址并至少通过详情 API 回查。分页中断、数据版本变化、稳定总数不守恒或 `coverage_status=partial` 时，保留真实缺口并按各 Skill 规则停止或降级。
+`dashboard_path` 必须解析为 `https://toufang-ai.guanghexinzhi.cn/content-dashboard?...` 绝对地址并通过详情 API 回查。外部详情规范参数为`content_id`；统一Agent冻结层会把上游历史`material_context_id`改写为`content_id`，工作台仍兼容旧报告。内部详情固定为`business=app|lead＋internal_snapshot_id＋view=analysis`。分页中断、数据版本变化、稳定总数不守恒或 `coverage_status=partial` 时，保留真实缺口并按各 Skill 规则停止或降级。
 
 ## 素材与生成路由
 

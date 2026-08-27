@@ -84,3 +84,15 @@ python scripts/artifact_workspace.py create --code <产物代码> --title <任�
 ```
 
 修改同一任务使用`new-version`；写完文件后使用`finalize`；需要通用交付包时使用`package`；交付前必须使用`validate`。入口负责目录、命名、版本、清单和哈希，Skill 不手工拼顶层路径。
+
+## 文档与工作台链接
+
+`validate`会自动检查`04_交付`中Markdown的文内锚点、跨文档相对路径、目标文档锚点和工作台URL结构。也可以对已有报告单独运行：
+
+```text
+python scripts/artifact_workspace.py check-links --path <报告或目录>
+```
+
+正式报告交付前再运行`--online-workbench`：它会把每个去重工作台链接映射到对应详情API，验证HTTP 200和返回身份与URL完全相等。外部详情规范参数是`content_id`；历史`material_context_id`仅作为兼容参数并产生警告。内部详情必须同时包含`business=app|lead`、`internal_snapshot_id`和`view=analysis`。
+
+工作台链接固定使用`https://toufang-ai.guanghexinzhi.cn/content-dashboard`。相对文档链接必须真实存在且不得越出当前项目；正式报告不能保留`链接`、`真实ID`、`example.com`等模板占位。
