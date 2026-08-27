@@ -25,4 +25,4 @@
 
 前贴存在时记录来源、文件、哈希、时长和`source_audio_mode=keep`。实际工具字段可以不同，但进入正式计划前必须映射到这一业务合同。
 
-`retrieval_mode`必须为已通过readiness与真实E2E的`hybrid`。`execution_mode=server_render`表示Mossland、Qwen ASR、素材检索和ffmpeg渲染都由统一OAuth MCP封装；MP4不得包含字幕流。
+`retrieval_mode`必须为已通过readiness与真实E2E的`hybrid`。`execution_mode=server_render`表示Mossland、Qwen ASR、素材检索和火山VOD云端渲染都由统一OAuth MCP封装；MP4不得包含字幕流。

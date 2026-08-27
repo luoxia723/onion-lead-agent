@@ -49,5 +49,5 @@ description: 当用户已经选定并确认一条 APP 或线索正式口播文�
 - 前贴与正文旁白、画面时间轴不得重叠。
 - 自动 QA 通过不等于内容通过，必须完整人工听看。
 - `retrieval_mode=hybrid`是混剪硬门。素材MCP readiness必须证明查询Embedding和同模型片段向量均就绪；任一环节未就绪时本Skill保持阻塞，不使用`lexical_fusion`或词法召回替代。
-- 正式合成由统一MCP服务器的ffmpeg执行；旁白仍只来自Mossland。系统本地TTS产物不得进入正式或试验混剪交付。
+- 正式合成由统一MCP的火山VOD异步剪辑Adapter执行；素材在服务端等队前导入为Vid，业务Agent不下载素材或运行本地ffmpeg。旁白仍只来自Mossland。系统本地TTS产物不得进入正式或试验混剪交付。
 - 最终MP4不得包含字幕流；同时不额外交付SRT、ASS或其他字幕源。
