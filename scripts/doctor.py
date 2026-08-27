@@ -21,7 +21,7 @@ SECRET_PATTERNS = (
 MANAGED_PATHS = (
     "AGENTS.md",
     "README.md",
-    "Skills",
+    ".agents",
     "产品资料",
     ".codex",
     "scripts",
@@ -80,7 +80,10 @@ def main() -> int:
         role = json.loads(role_manifest_path.read_text(encoding="utf-8"))
         release = json.loads(release_path.read_text(encoding="utf-8"))
         expected = set(role.get("resolved_skill_names", []))
-        actual = {path.parent.name for path in (root / "Skills").glob("*/*/SKILL.md")}
+        actual = {
+            path.parent.name
+            for path in (root / ".agents" / "skills").glob("*/SKILL.md")
+        }
         if actual != expected:
             errors.append(f"Skill集合不一致：缺少{sorted(expected-actual)}，多出{sorted(actual-expected)}")
         forbidden = actual & FORBIDDEN_SKILLS
@@ -88,6 +91,8 @@ def main() -> int:
             errors.append("包含禁止发行Skill：" + ", ".join(sorted(forbidden)))
         if release.get("role") != role.get("role"):
             errors.append("角色清单与发行信息不一致")
+        if release.get("skill_discovery_root") != ".agents/skills":
+            errors.append("Skill发现根目录不是.agents/skills")
         if release.get("mcp_connection_status") != "deployed":
             notices.append("统一OAuth MCP尚未部署；当前仅为结构验收快照")
 

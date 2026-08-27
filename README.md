@@ -2,7 +2,7 @@
 
 > 统一OAuth MCP已通过部署和真实生成验收，可以按下列方式连接。
 
-这是可直接作为Codex项目打开的 `lead` 角色仓库。第一次打开时信任项目，并在Codex的MCP面板完成一次`onion-agent` OAuth连接；后续Git更新不需要重新登录。
+这是可直接作为Codex项目打开的 `lead` 角色仓库。第一次打开时信任项目；Codex会自动从`.agents/skills/`发现本角色Skill。再在MCP面板完成一次`onion-agent` OAuth连接；后续Git更新不需要重新登录。
 
 日常只在`工作区/`中放输入、草稿、审核记录和产物。系统目录由主仓库自动更新，不要手工修改。
 

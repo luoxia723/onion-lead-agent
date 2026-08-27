@@ -20,7 +20,7 @@
 ## 强制规则
 
 1. 不允许由外层 Agent 逐页调用 MCP、阅读页面正文后再请求下一页。
-2. 固定调用一次`intelligence_freeze_report_input`。服务器只向外层返回记录数、页数、SHA、完整度和快照产物；下载ZIP后用`Skills/scripts/extract_report_input_snapshot.py`校验并展开。下游不配置MCP Bearer Token。
+2. 固定调用一次`intelligence_freeze_report_input`。服务器只向外层返回记录数、页数、SHA、完整度和快照产物；下载ZIP后用`.agents/scripts/extract_report_input_snapshot.py`校验并展开。下游不配置MCP Bearer Token。
 3. MCP 的 transport envelope、每页 applied filters、重复 scope 和游标不进入模型输入；快照保留每条业务记录全部字段。
 4. 同一个内部完整素材池快照同时供内部需求和内部创意使用；不得为两份报告重复分页。
 5. 模型任务不继承当前长对话。使用只含目标 Skill、直接合同、本次运行参数和紧凑证据包的隔离上下文。
@@ -29,11 +29,11 @@
 8. 不默认逐条回查全部详情。冻结证据不足以完成六维判断的候选、中心/边界样本和最终代表案例，可以在一个程序化阶段批量补取详情；返回仍写入私有快照，不进入外层上下文。
 9. 快照、模型请求、响应、usage 和回执写入 `.runtime/策略Agent产物/`，不写入 Git。
 10. 任一分页不守恒、数据版本变化、快照摘要变化或映射校验失败时停止，不退回外层手工拼接 MCP 返回。
-11. 已有同一冻结输入的正式验收报告时，不允许模型整篇重写。先用 `Skills/scripts/reuse_validated_report.py` 锁定报告、语义哈希和完整报告事实哈希；内部需求使用语义运行 `receipt.json` 的标准化单元和最终映射摘要。语义指纹与报告事实哈希都完全相同时才直接复用原报告并重新运行校验器，模型调用数必须为0。只有语义变化时进入局部重分析；只有消耗、排名、高表现状态、标题或链接变化时不重跑语义模型，但必须确定性重渲染，不能复制旧统计。试验稿复用后仍是试验稿，不能因复用回执升级为正式报告。
+11. 已有同一冻结输入的正式验收报告时，不允许模型整篇重写。先用 `.agents/scripts/reuse_validated_report.py` 锁定报告、语义哈希和完整报告事实哈希；内部需求使用语义运行 `receipt.json` 的标准化单元和最终映射摘要。语义指纹与报告事实哈希都完全相同时才直接复用原报告并重新运行校验器，模型调用数必须为0。只有语义变化时进入局部重分析；只有消耗、排名、高表现状态、标题或链接变化时不重跑语义模型，但必须确定性重渲染，不能复制旧统计。试验稿复用后仍是试验稿，不能因复用回执升级为正式报告。
 
-冻结后运行 `Skills/scripts/prepare_report_model_bundle.py` 按报告字段合同生成有界批次。外部需求保留全部需求证据；外部创意按 `material_context_id` 合并同一案例的多个创意观察；内部创意只选择 `creative_analysis_eligible=true`，但原始完整池仍留在快照中。模型 bundle 的记录数、稳定 ID 和源快照 SHA 必须写入 manifest。
+冻结后运行 `.agents/scripts/prepare_report_model_bundle.py` 按报告字段合同生成有界批次。外部需求保留全部需求证据；外部创意按 `material_context_id` 合并同一案例的多个创意观察；内部创意只选择 `creative_analysis_eligible=true`，但原始完整池仍留在快照中。模型 bundle 的记录数、稳定 ID 和源快照 SHA 必须写入 manifest。
 
-需要模型处理的每个有界批次通过 `Skills/scripts/run_isolated_model_task.py` 执行。只显式传目标 Skill、当前任务必需的直接合同和一个模型 batch；该命令使用临时 Codex 会话，不继承外层聊天，不允许任务内再次访问 MCP，并把 usage 与输入/输出摘要写入回执。模型调用仍须当前任务明确授权。
+需要模型处理的每个有界批次通过 `.agents/scripts/run_isolated_model_task.py` 执行。只显式传目标 Skill、当前任务必需的直接合同和一个模型 batch；该命令使用临时 Codex 会话，不继承外层聊天，不允许任务内再次访问 MCP，并把 usage 与输入/输出摘要写入回执。模型调用仍须当前任务明确授权。
 
 多批任务固定使用 map/reduce：map 只输出“稳定记录ID＋本报告语义字段＋中心/边界证据”，reduce 只读取 map 结果和必要统计。所有稳定ID必须在 map 输出中有且仅有一个处理去向。reduce 不得重新读取原始快照；报告渲染不得重新读取全部模型 batch。
 
@@ -46,7 +46,7 @@
 工具成功后：
 
 ```bash
-python3 Skills/scripts/extract_report_input_snapshot.py \
+python3 .agents/scripts/extract_report_input_snapshot.py \
   .runtime/<任务>/report-input-snapshot.zip \
   --expected-sha256 <工具返回的sha256> \
   --output-dir .runtime/<任务>/冻结输入
