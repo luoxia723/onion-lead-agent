@@ -12,5 +12,6 @@
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
     "onion-voiceover-video-mix"
-  ]
+  ],
+  "workflow_contract_sha256": "79a1667a0a461f4064960651708dd377fe3b0d77da638833ce9fdc477ee4c8d2"
 }

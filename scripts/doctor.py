@@ -96,6 +96,28 @@ def main() -> int:
             errors.append("Skill发现根目录不是.agents/skills")
         if release.get("mcp_connection_status") != "deployed":
             notices.append("统一OAuth MCP尚未部署；当前仅为结构验收快照")
+        role_workflow_hash = str(role.get("workflow_contract_sha256") or "")
+        release_workflow_hash = str(release.get("workflow_contract_sha256") or "")
+        if not re.fullmatch(r"[0-9a-f]{64}", role_workflow_hash):
+            errors.append("角色清单缺少有效工作流合同哈希")
+        if role_workflow_hash != release_workflow_hash:
+            errors.append("角色清单与发行信息的工作流合同哈希不一致")
+        agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")
+        if "## Skill 路由与上下文" not in agents_text:
+            errors.append("AGENTS缺少Skill路由与上下文")
+        for skill_name in expected:
+            if agents_text.count(f"| `{skill_name}` |") != 1:
+                errors.append(f"AGENTS路由不是唯一一条：{skill_name}")
+        if "不因角色拥有多个Skill而预加载全部Skill" not in agents_text:
+            errors.append("AGENTS缺少最小上下文规则")
+        if "`onion-ai-preroll`当前暂缓且尚未进入本角色发行" not in agents_text:
+            errors.append("AGENTS缺少未发行AI前贴边界")
+
+        stale_phrases = ("统一MCP服务器的ffmpeg", "无字幕本地渲染", "服务器的ffmpeg")
+        for path in (root / ".agents" / "skills").rglob("*.md"):
+            text = path.read_text(encoding="utf-8")
+            if any(phrase in text for phrase in stale_phrases):
+                errors.append(f"Skill残留已替代执行口径：{path.relative_to(root)}")
 
     for name in USER_DIRECTORIES:
         directory = root / "工作区" / name
