@@ -2,7 +2,7 @@
   "schema_version": "onion_artifact_layout_v1",
   "timezone": "Asia/Shanghai",
   "workspace_root": "工作区/产物",
-  "task_id_pattern": "^(EDR|IDR|ECR|ICR|PM|FD|AVC|LVC|AIC|AIMG|VOM|THM)-[0-9]{8}-[0-9]{6}-[0-9a-f]{4}$",
+  "task_id_pattern": "^(EDR|IDR|ECR|ICR|PM|FD|AVC|LVC|AIC|AIMG|PREROLL|VOM|THM)-[0-9]{8}-[0-9]{6}-[0-9a-f]{4}$",
   "version_pattern": "^v[0-9]{3}$",
   "phases": [
     "00_任务",
@@ -24,6 +24,7 @@
     "LVC": {"skill": "onion-lead-video-copy", "category": "内容文案", "label": "线索视频口播文案", "title_source": "购买动因名称", "primary_extension": "md"},
     "AIC": {"skill": "onion-app-image-copy", "category": "内容文案", "label": "APP图片投放文案", "title_source": "功能方向名称", "primary_extension": "md"},
     "AIMG": {"skill": "onion-app-image", "category": "APP图片", "label": "APP图片", "title_source": "功能方向或图片文案主题", "primary_extension": null},
+    "PREROLL": {"skill": "onion-ai-preroll", "category": "视频前贴", "label": "AI前贴", "title_source": "确认文案标题或前贴创意主题", "primary_extension": "mp4"},
     "VOM": {"skill": "onion-voiceover-video-mix", "category": "视频混剪", "label": "纯配音混剪", "title_source": "确认文案标题或购买动因", "primary_extension": "mp4"},
     "THM": {"skill": "onion-talking-head-video-mix", "category": "视频混剪", "label": "口播主轴混剪", "title_source": "母片人物、文案标题或购买动因", "primary_extension": "mp4"}
   }
