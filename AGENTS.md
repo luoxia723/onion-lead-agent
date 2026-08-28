@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.11`，来源提交 `0af2182cdfc437b6f7dc9ea1c70bb563c60ca01a`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.12`，来源提交 `4e52d21ab4870594bcb351b5f34a5f3613e8d736`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
@@ -56,11 +56,11 @@
 
 用户说“更新项目”“拉取最新”或相近表达时：
 
-1. 运行 `git status --short`，只检查系统维护区是否被修改；
-2. 系统维护区有改动时停止并说明，不覆盖用户修改；
-3. 使用 `git pull --ff-only`，禁止reset、clean、checkout覆盖和force操作；
-4. 更新后运行 `python scripts/doctor.py --offline`；
-5. 不移动、不删除、不改写用户工作区中的任何既有文件。
+1. 先检查项目根目录是否存在`.git/`；ZIP工作目录首次更新时运行`python scripts/update_workspace.py --adopt-git`，一次性接入本角色公开GitHub仓库；
+2. 已接入Git时运行`python scripts/update_workspace.py`，由脚本检查系统维护区并执行`git pull --ff-only`；
+3. 系统维护区有改动或分支发生分叉时停止并说明，不reset、不clean、不强制覆盖；
+4. 更新后脚本自动运行`python scripts/doctor.py --offline`；
+5. 接入和更新前后都校验用户文件哈希，不移动、不删除、不改写用户工作区中的任何既有文件。
 
 ## 文件所有权
 
