@@ -2,4 +2,4 @@
 [mcp_servers.onion-agent]
 url = "https://intel-mcp.guanghexinzhi.cn/agent/mcp"
 startup_timeout_sec = 20
-tool_timeout_sec = 900
+tool_timeout_sec = 2100
