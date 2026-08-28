@@ -2,9 +2,9 @@
   "schema_version": "onion_role_workspace_release_v1",
   "role": "lead",
   "repository": "onion-lead-agent",
-  "workspace_version": "0.1.10",
-  "source_revision": "6386041dd3c768a1b546c3154c105f94f6f96787",
-  "generated_at": "2026-08-28T02:22:01Z",
+  "workspace_version": "0.1.11",
+  "source_revision": "0af2182cdfc437b6f7dc9ea1c70bb563c60ca01a",
+  "generated_at": "2026-08-28T03:31:35Z",
   "skills": [
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
@@ -21,6 +21,12 @@
     "python_minimum": "3.10",
     "node_required": false,
     "ffmpeg_required": false
+  },
+  "quick_connect": {
+    "macos": "连接Agent.command",
+    "windows": "连接Agent.cmd",
+    "mcp_server": "onion-agent",
+    "oauth_client_registration": "dcr"
   },
   "workflow_contract_sha256": "79a1667a0a461f4064960651708dd377fe3b0d77da638833ce9fdc477ee4c8d2",
   "artifact_contract_sha256": "6ef7d63e75e8829b248eaf3c37d6b8ee6e5c9e2d7482b2b1623b5c06e58f6b13",

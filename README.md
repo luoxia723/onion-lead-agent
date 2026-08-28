@@ -6,7 +6,7 @@
 
 **第一次使用，请先打开 [首次使用说明](首次使用.md)。** 里面包含 Windows/macOS 通用的打开方式、Skill加载、MCP认证、Token输入位置、环境检查和常见故障处理。
 
-打开仓库根目录并信任项目后，Codex会自动从`.agents/skills/`发现本角色Skill，并从`.codex/config.toml`读取`onion-agent` MCP地址。使用者只在Codex认证页输入管理员发放的一次性Token；不填任何供应商API Key。
+打开仓库根目录并信任项目后，Codex会自动从`.agents/skills/`发现本角色Skill，并从`.codex/config.toml`读取`onion-agent` MCP地址。macOS双击根目录`连接Agent.command`、Windows双击`连接Agent.cmd`即可保持本机OAuth回调并完成连接。使用者只在浏览器认证页输入管理员发放的一次性Token；不填任何供应商API Key。
 
 第一次打开后直接对Codex说“初始化项目环境”。Codex会按Windows/macOS选择包内脚本，检查Python、Git、项目文件和MCP配置；取得确认后可以安装缺失的Python/Git并创建项目内`.runtime/venv`。Node.js、FFmpeg和云厂商SDK不是正式角色依赖。
 
