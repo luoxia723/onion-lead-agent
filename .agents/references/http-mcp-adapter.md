@@ -68,7 +68,7 @@
 
 ### APP 图片
 
-配置卡、Prompt、参考图顺序和 `--validate-only` 仍由 Skill 本地确定。参考图按SHA-256去重后先通过`generation_upload_media`各上传一次；付费生成调`generation_kie_image`并按清单顺序传`reference_output_ids`，不在每个job重复传base64。每个渲染job使用绑定`task_id＋job_id＋清单指纹`的独立幂等Key；无参考图时省略参考字段走文生图。候选需要尺寸/体积处理时继续调`generation_prepare_image_delivery`；两类返回都立即下载并校验 SHA-256。
+配置卡、Prompt、参考图顺序和 `--validate-only` 仍由 Skill 本地确定。参考图按SHA-256去重后先通过`generation_upload_media`各上传一次；付费生成调`generation_kie_image`并按清单顺序传`reference_output_ids`，不在每个job重复传base64。每个渲染job使用绑定`task_id＋job_id＋清单指纹`的独立幂等Key；无参考图时省略参考字段走文生图。KIE候选立即下载并校验SHA-256；用户提交选择后，尺寸和体积处理由Skill本地Pillow脚本只对采纳图片批量执行，不调用MCP交付处理。
 
 ### APP/线索口播文案
 

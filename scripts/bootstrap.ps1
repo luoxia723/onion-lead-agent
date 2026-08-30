@@ -82,9 +82,11 @@ if ($Mode -eq "Prepare" -or $Mode -eq "Install") {
     if ($LASTEXITCODE -ne 0) { throw "创建项目虚拟环境失败" }
     $RunExe = Join-Path $Venv "Scripts\python.exe"
     $RunArgs = @()
+    & $RunExe (Join-Path $ProjectRoot "scripts\sync_role_dependencies.py") --install
+    if ($LASTEXITCODE -ne 0) { throw "安装角色本地Python依赖失败" }
 }
 
-Write-Output "环境口径: Python>=3.10；Git仅用于Pull；Node.js、FFmpeg和云厂商SDK不需要安装。"
+Write-Output "环境口径: Python>=3.10；包含APP图片Skill的角色额外使用项目venv中的Pillow；Node.js、FFmpeg和云厂商SDK不需要安装。"
 & $RunExe @RunArgs (Join-Path $ProjectRoot "scripts\first_run_check.py") --offline
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if ($Mode -eq "Prepare" -or $Mode -eq "Install") {

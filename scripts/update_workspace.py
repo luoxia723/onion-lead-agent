@@ -46,6 +46,29 @@ USER_MARKERS = tuple(f"{path}/.gitkeep" for path in USER_ROOTS)
 BACKUP_RELATIVE = Path(".runtime") / "system-backups"
 
 
+def project_python(root: Path) -> Path | None:
+    candidates = (
+        root / ".runtime" / "venv" / "bin" / "python",
+        root / ".runtime" / "venv" / "Scripts" / "python.exe",
+    )
+    return next((path for path in candidates if path.is_file()), None)
+
+
+def sync_dependencies(root: Path) -> int:
+    requirement = root / ".agents" / "skills" / "onion-app-image" / "requirements.txt"
+    if not requirement.is_file():
+        return 0
+    python = project_python(root)
+    if python is None:
+        print("更新已完成，但APP图片本地依赖尚未同步；请运行项目环境初始化。")
+        return 0
+    result = subprocess.run(
+        [str(python), str(root / "scripts" / "sync_role_dependencies.py"), "--install"],
+        cwd=root,
+    )
+    return result.returncode
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="安全更新Codex角色项目")
     parser.add_argument(
@@ -239,6 +262,9 @@ def update_git(root: Path) -> int:
     )
     if doctor.returncode != 0:
         return doctor.returncode
+    dependency_result = sync_dependencies(root)
+    if dependency_result != 0:
+        return dependency_result
     print("workspace_update=ok")
     return 0
 

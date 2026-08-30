@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.15`，来源提交 `93ed53d32e4e124984279a309c5a167f5d41f018`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.16`，来源提交 `e786d34e8542f092d69e6e3216c43a614d28c881`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
@@ -48,8 +48,8 @@
 1. 先识别系统；Windows运行`powershell -ExecutionPolicy Bypass -File scripts/bootstrap.ps1 -Mode Check`，macOS运行`/bin/bash scripts/bootstrap.sh --check`；
 2. 只检查或创建项目内`.runtime/venv`不需要额外确认；需要通过winget或Homebrew安装Python/Git前，先说明将修改本机软件并取得用户确认；
 3. 用户确认后，Windows改用`-Mode Install`，macOS改用`--install`。能够检测但不安装系统软件时使用Windows的`-Mode Prepare`或macOS的`--prepare`；
-4. 不安装Node.js、FFmpeg、Pillow、云厂商SDK或供应商Key。正式流程只需要Python 3.10+；Git只用于Pull；视频与图片规格处理都由统一MCP云端执行；
-5. 后续本地Python命令优先使用项目`.runtime/venv`中的解释器。不得递归安装各Skill目录中的历史或可选`requirements.txt`；
+4. 不安装Node.js、FFmpeg、云厂商SDK或供应商Key。包含APP图片Skill的角色额外在项目`.runtime/venv`中安装Skill精确锁定的Pillow；其他角色不安装；
+5. 后续本地Python命令优先使用项目`.runtime/venv`中的解释器。只由`scripts/sync_role_dependencies.py`同步已登记角色依赖，不递归安装全部Skill目录；
 6. 策略角色的隔离模型任务优先复用Codex桌面端自带执行器；找不到时报告具体缺口，不为此默认安装Node.js。
 
 ## 更新

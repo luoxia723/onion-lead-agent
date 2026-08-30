@@ -15,6 +15,7 @@ import urllib.request
 from pathlib import Path
 
 from codex_runtime import resolve_codex_binary
+from sync_role_dependencies import dependency_status
 
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -98,7 +99,13 @@ def main() -> int:
     )
     add(results, "Node.js", "ok", "正式角色流程不需要安装")
     add(results, "FFmpeg", "ok", "正式视频由统一MCP的火山VOD云端渲染，本地不需要安装")
-    add(results, "本地Python包", "ok", "正式流程只使用Python标准库；Pillow和云厂商SDK不属于首次安装依赖")
+    package_required, package_ok, package_detail = dependency_status(root)
+    add(
+        results,
+        "本地Python包",
+        "ok" if package_ok else "error",
+        package_detail if package_required else "当前角色只使用Python标准库",
+    )
 
     required = (
         "AGENTS.md",

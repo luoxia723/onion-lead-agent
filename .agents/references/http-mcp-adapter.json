@@ -116,7 +116,7 @@
       "tools": ["generation_kimi_generate"]
     },
     "onion-app-image": {
-      "tools": ["generation_upload_media", "generation_kie_image", "generation_prepare_image_delivery", "generation_get_output"]
+      "tools": ["generation_upload_media", "generation_kie_image", "generation_get_output"]
     },
     "onion-voiceover-video-mix": {
       "required_retrieval_mode": "hybrid",

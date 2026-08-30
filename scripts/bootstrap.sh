@@ -61,9 +61,10 @@ if [[ "$MODE" == "prepare" || "$MODE" == "install" ]]; then
   mkdir -p "$PROJECT_ROOT/.runtime"
   "$PYTHON_BIN" -m venv "$VENV_DIR"
   RUN_PYTHON="$VENV_DIR/bin/python"
+  "$RUN_PYTHON" "$PROJECT_ROOT/scripts/sync_role_dependencies.py" --install
 fi
 
-echo "环境口径: Python>=3.10；Git仅用于Pull；Node.js、FFmpeg和云厂商SDK不需要安装。"
+echo "环境口径: Python>=3.10；包含APP图片Skill的角色额外使用项目venv中的Pillow；Node.js、FFmpeg和云厂商SDK不需要安装。"
 "$RUN_PYTHON" "$PROJECT_ROOT/scripts/first_run_check.py" --offline
 if [[ "$MODE" == "prepare" || "$MODE" == "install" ]]; then
   echo "environment_prepare=ok python=$RUN_PYTHON"
