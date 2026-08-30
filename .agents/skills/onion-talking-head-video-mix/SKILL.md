@@ -44,7 +44,7 @@ description: 当用户要把素材库或当前上传的真人/数字人口播母
 7. 每个配画语义段固定使用`materials_search_segments(retrieval_mode=hybrid)`；从真实候选中终选并回查素材事实，没有合格候选时保留真人。
 8. 多版本避开近期和本批重复素材，并对合理配画位置做有限差异；不能只换素材但复制完全相同的切点。
 9. 生成并校验一份完整混剪计划；业务线、母片和CTA检查直接写入计划，不额外生成入口记录。配画静音，时间范围不重叠、不越界。
-10. 将母片URL或已上传`output_id`、静音配画计划、真实字幕时间轴和可选的一条完整有声前贴映射到`generation_render_talking_head_video`；传当前任务授权和绑定计划哈希、母片哈希、版本的幂等Key。立即下载MP4与工具返回的ASS字幕产物，分别校验SHA-256，再完成自动技术检查和人工完整听看。
+10. 将母片URL或已上传`output_id`、静音配画计划、真实字幕时间轴和可选的一条完整有声前贴映射到`generation_render_talking_head_video`；传当前任务授权、绑定计划哈希/母片哈希/版本的幂等Key，以及[统一OAuth MCP适配](../../references/http-mcp-adapter.md)要求的当前视频版本批次`generation_context`。明确终态失败只由服务器重试当前视频，状态不明时用`generation_get_operation`续查原requestId，不新建火山任务。立即下载MP4与工具返回的ASS字幕产物，分别校验SHA-256，再完成自动技术检查和人工完整听看。
 11. 交付本地计划、字幕、成片和 QA；不入库、不发布、不投放。
 
 ## 核心边界

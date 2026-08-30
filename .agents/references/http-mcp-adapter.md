@@ -1,6 +1,6 @@
-# 当前统一 OAuth MCP 适配
+# 统一 OAuth MCP 适配 v3
 
-本文件是正式 Skill 与当前已部署工具之间的可替换适配层。Skill 的输入事实、业务判断和停止条件仍是权威；工具名、运输和返回字段以后变化时修改本适配，不反向降低 Skill 要求。机器清单见 [HTTP MCP 适配合同](http-mcp-adapter.json)。
+本文件是正式 Skill 与生产 v3 工具之间的可替换适配层。v3 已随主仓 revision `0147ed18316cbf388710edda2d2c741eed627182` 部署并完成真实生成、两类火山 VOD 渲染与公网回源验收。Skill 的输入事实、业务判断和停止条件仍是权威；工具名、运输和返回字段以后变化时修改本适配，不反向降低 Skill 要求。机器清单见 [HTTP MCP 适配合同](http-mcp-adapter.json)。
 
 ## 唯一连接
 
@@ -26,6 +26,7 @@
 - `generation_qwen_asr`；
 - `generation_render_voiceover_video`；
 - `generation_render_talking_head_video`；
+- `generation_get_operation`；
 - `generation_get_output`。
 
 数据响应仍分别符合 `intelligence_mcp_v3` 和 `materials_mcp_v2`。工具集可以新增，当前 Skill 所需工具、字段、分页、scope 和回源语义不能缺失。
@@ -34,7 +35,10 @@
 
 - 执行前确认当前任务真实发现了所需工具；只有配置文件而工具未进入任务时停止并要求刷新客户端。
 - 生成工具必须传 `approved_in_current_task=true` 和本次唯一 `idempotency_key`。用户在当前任务明确要求生成、配音、ASR 或渲染即可视为当前授权；只是预览计划或 dry-run 时不得传真。
-- `idempotency_key` 绑定任务、工具、输入指纹和用户意图。网络重试复用原 Key；用户明确要求新版才创建新 Key；原请求失败后不自动换 Key 重扣费用。
+- 新任务同时传 `generation_context`：`task_id`、`task_version`、`batch_id`、`logical_item_id`、`authorized_item_count`和1起始`item_index`。同一批次的批准数量必须固定，服务器拒绝重复序号、身份漂移和超量逻辑项。旧角色版本暂由服务器按单项legacy身份兼容，不获得跨Key批次数量额度。
+- `idempotency_key` 绑定逻辑产物、工具、输入指纹和用户意图，不绑定供应商attempt。明确终态失败只由服务器重试当前逻辑项，最多3个attempt；成功项不重跑。已知taskId只续查原任务；状态不明时停止新建。用户明确修改输入或要求新版才创建新逻辑身份。
+- 队列或上传字节预算在供应商调用前拒绝时，复用原Key和原`generation_context`稍后重试；不得为队列满更换Key。
+- 失败或长任务可用`generation_get_operation(tool_name,idempotency_key)`回查当前逻辑状态、attempt、供应商taskId和可执行下一步；该工具不发起供应商调用。
 - 生成产物返回高熵 `output_id`、SHA-256 和短时下载地址。立即下载到当前用户产物目录并校验哈希；不把短时 URL 写成长期产物引用。
 - 模型、生图、配音、ASR 和自动 QA 成功不代表人工审核通过。
 

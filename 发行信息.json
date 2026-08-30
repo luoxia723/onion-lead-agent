@@ -2,9 +2,9 @@
   "schema_version": "onion_role_workspace_release_v1",
   "role": "lead",
   "repository": "onion-lead-agent",
-  "workspace_version": "0.1.18",
-  "source_revision": "e79525a41113991f6d9d72d79d7932c1985c0b6e",
-  "generated_at": "2026-08-30T12:07:03Z",
+  "workspace_version": "0.1.19",
+  "source_revision": "181134ffe350d605cd491491758049947858fe2a",
+  "generated_at": "2026-08-30T17:45:04Z",
   "skills": [
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
@@ -52,7 +52,7 @@
       ".runtime/venv"
     ]
   },
-  "workflow_contract_sha256": "79a1667a0a461f4064960651708dd377fe3b0d77da638833ce9fdc477ee4c8d2",
+  "workflow_contract_sha256": "9a1a9156185364d660c023dbd52cce08dc112af98c4715b3738b2c985ec85cb6",
   "artifact_contract_sha256": "6ef7d63e75e8829b248eaf3c37d6b8ee6e5c9e2d7482b2b1623b5c06e58f6b13",
   "user_owned_directories": [
     "工作区/输入",

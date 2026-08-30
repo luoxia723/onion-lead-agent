@@ -1,7 +1,8 @@
 {
-  "schema_version": "onion_skill_http_mcp_adapter_v2",
+  "schema_version": "onion_skill_http_mcp_adapter_v3",
   "deployment_status": {
-    "production": "deployed_and_real_e2e_passed"
+    "production": "v3_deployed_and_real_e2e_passed",
+    "source": "content_automation_0147ed18316cbf388710edda2d2c741eed627182"
   },
   "policy": {
     "skills_are_business_authority": true,
@@ -60,13 +61,26 @@
       "generation_qwen_asr",
       "generation_render_voiceover_video",
       "generation_render_talking_head_video",
+      "generation_get_operation",
       "generation_get_output"
     ]
   },
   "generation_contract": {
     "approval_field": "approved_in_current_task",
     "idempotency_field": "idempotency_key",
+    "generation_context_fields": [
+      "task_id",
+      "task_version",
+      "batch_id",
+      "logical_item_id",
+      "authorized_item_count",
+      "item_index"
+    ],
     "retry_reuses_same_key": true,
+    "retry_scope": "failed_logical_item_only",
+    "max_provider_attempts": 3,
+    "known_provider_task_is_queried_not_recreated": true,
+    "unknown_provider_state_forbids_new_attempt": true,
     "new_key_requires_deliberate_new_user_intent": true,
     "outputs_are_short_lived_and_sha256_verified": true
   },
@@ -110,13 +124,13 @@
       ]
     },
     "onion-app-video-copy": {
-      "tools": ["generation_kimi_generate"]
+      "tools": ["generation_kimi_generate", "generation_get_operation"]
     },
     "onion-lead-video-copy": {
-      "tools": ["generation_kimi_generate"]
+      "tools": ["generation_kimi_generate", "generation_get_operation"]
     },
     "onion-app-image": {
-      "tools": ["generation_upload_media", "generation_kie_image", "generation_get_output"]
+      "tools": ["generation_upload_media", "generation_kie_image", "generation_get_operation", "generation_get_output"]
     },
     "onion-voiceover-video-mix": {
       "required_retrieval_mode": "hybrid",
@@ -128,6 +142,7 @@
         "materials_get_segments",
         "materials_prepare_sources",
         "generation_render_voiceover_video",
+        "generation_get_operation",
         "generation_get_output"
       ]
     },
@@ -141,6 +156,7 @@
         "materials_prepare_sources",
         "generation_upload_media",
         "generation_render_talking_head_video",
+        "generation_get_operation",
         "generation_get_output"
       ]
     }

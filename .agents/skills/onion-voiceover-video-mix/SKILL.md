@@ -32,12 +32,12 @@ description: 当用户已经选定并确认一条 APP 或线索正式口播文�
 
 1. 冻结一条确认文案及其逐句内容；不修改正文，不从多条文案中替用户选择。
 2. 确认业务线、音色、语速、前贴状态和所有外部/付费授权。
-3. 使用用户已确认的`voice_id`、冻结正文和当前任务授权调`generation_moss_tts`；传`approved_in_current_task=true`和绑定“任务＋文案哈希＋voice_id＋版本”的幂等Key。最终旁白是正文唯一音轨，后续不改写正文或更换音色。
-4. 将Mossland返回的`output_id`传给`generation_qwen_asr`，取得真实词级/句级时间轴并人工听审；不能按字数估时生成正式计划。ASR使用独立幂等Key，网络重试仍复用原Key。
+3. 使用用户已确认的`voice_id`、冻结正文和当前任务授权调`generation_moss_tts`；传`approved_in_current_task=true`、绑定“任务＋文案哈希＋voice_id＋版本”的幂等Key，以及[统一OAuth MCP适配](../../references/http-mcp-adapter.md)要求的任务/版本/阶段批次`generation_context`。最终旁白是正文唯一音轨，后续不改写正文或更换音色。
+4. 将Mossland返回的`output_id`传给`generation_qwen_asr`，取得真实词级/句级时间轴并人工听审；不能按字数估时生成正式计划。ASR使用独立幂等Key和独立阶段`generation_context`，网络重试仍复用原Key；明确失败只重试当前音频，状态不明时回查`generation_get_operation`。
 5. 按句子作用形成画面需求，固定调用`materials_search_segments(retrieval_mode=hybrid)`，从真实候选中选择配画并回查稳定身份；不读取需求报告或创意报告。MCP没有证明实际模式为hybrid时停止，不降级词法检索。
 6. 明确产品主张的句组至少有一处同名`product_feature`且画面确实展示该功能的证据镜头，其余可以使用相关学习情境。产品证据不死卡素材大类：`04_产品演示`优先，带同名功能标签并明确展示真实产品界面的`06_空镜`也可使用；不能用其他功能冒充。
 7. 生成并校验混剪计划；正文配画全部静音，前贴如有则完整播放并保留原声。
-8. 将连续镜头计划、Mossland `output_id`和可选的一条完整有声前贴源映射给`generation_render_voiceover_video`；渲染幂等Key绑定计划哈希与版本。服务只保留Mossland正文旁白，正文不生成、烧录或内嵌字幕；前贴完整播放且保留原声。画面不足时返回素材选择，不用黑屏、冻结帧或末帧补时。
+8. 将连续镜头计划、Mossland `output_id`和可选的一条完整有声前贴源映射给`generation_render_voiceover_video`；渲染幂等Key绑定计划哈希与版本，并传当前视频版本批次的`generation_context`。服务只保留Mossland正文旁白，正文不生成、烧录或内嵌字幕；前贴完整播放且保留原声。画面不足时返回素材选择，不用黑屏、冻结帧或末帧补时；渲染状态不明时只回查原requestId，不新建火山任务。
 9. 完成自动技术检查和人工听看；人工未通过时不得标记为正式交付。
 10. 交付本地成片和留痕，不上传广告平台、不发布。
 
