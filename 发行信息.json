@@ -2,9 +2,9 @@
   "schema_version": "onion_role_workspace_release_v1",
   "role": "lead",
   "repository": "onion-lead-agent",
-  "workspace_version": "0.1.16",
-  "source_revision": "e786d34e8542f092d69e6e3216c43a614d28c881",
-  "generated_at": "2026-08-30T10:41:18Z",
+  "workspace_version": "0.1.17",
+  "source_revision": "31a93f9593d0dd346c7903e85282053a41843f57",
+  "generated_at": "2026-08-30T11:21:50Z",
   "skills": [
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
@@ -31,7 +31,11 @@
   },
   "automatic_update": {
     "script": "scripts/update_workspace.py",
+    "check_flag": "--check",
+    "apply_flag": "--apply",
     "zip_adoption_flag": "--adopt-git",
+    "cache": ".runtime/update-status.json",
+    "check_ttl_hours": 24,
     "branch": "main",
     "strategy": "fetch_then_ff_only",
     "preserves": [

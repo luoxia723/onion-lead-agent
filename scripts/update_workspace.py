@@ -8,8 +8,16 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import urlopen
+
+
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8", errors="replace")
 
 
 PUBLIC_OWNER = "luoxia723"
@@ -44,6 +52,247 @@ USER_ROOTS = (
 )
 USER_MARKERS = tuple(f"{path}/.gitkeep" for path in USER_ROOTS)
 BACKUP_RELATIVE = Path(".runtime") / "system-backups"
+UPDATE_STATUS_RELATIVE = Path(".runtime") / "update-status.json"
+CHECK_TTL_SECONDS = 24 * 60 * 60
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def isoformat(value: datetime) -> str:
+    return value.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def load_json(path: Path) -> dict[str, object] | None:
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def write_json(path: Path, value: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(path.suffix + ".tmp")
+    temp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temp.replace(path)
+
+
+def version(root: Path, ref: str | None = None) -> str:
+    if ref is None:
+        path = root / "VERSION"
+        return path.read_text(encoding="utf-8").strip() if path.is_file() else "unknown"
+    result = run(root, "show", f"{ref}:VERSION", check=False)
+    return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else "unknown"
+
+
+def cached_check(root: Path, workspace_identity: str) -> dict[str, object] | None:
+    cached = load_json(root / UPDATE_STATUS_RELATIVE)
+    if not cached or cached.get("workspace_identity") != workspace_identity:
+        return None
+    try:
+        checked_epoch = float(cached.get("checked_epoch") or 0)
+        defer_until_epoch = float(cached.get("defer_until_epoch") or 0)
+    except (TypeError, ValueError):
+        return None
+    if time.time() - checked_epoch >= CHECK_TTL_SECONDS:
+        return None
+    result = dict(cached)
+    if result.get("update_available"):
+        result["status"] = "deferred" if defer_until_epoch > time.time() else "update_available"
+    result["cached"] = True
+    return result
+
+
+def zip_identity(root: Path) -> str:
+    release = load_json(root / "发行信息.json") or {}
+    revision = str(release.get("source_revision") or "unknown")
+    return f"zip:{version(root)}:{revision}"
+
+
+def remote_version_url(root: Path) -> str:
+    repository = repository_name(root)
+    return f"https://raw.githubusercontent.com/{PUBLIC_OWNER}/{repository}/main/VERSION"
+
+
+def zip_remote_version(root: Path, repository_url: str | None) -> str:
+    if repository_url:
+        with tempfile.TemporaryDirectory(prefix="onion-role-check-") as raw:
+            snapshot = Path(raw) / "snapshot"
+            clone = subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    "--depth",
+                    "1",
+                    "--branch",
+                    "main",
+                    "--single-branch",
+                    repository_url,
+                    str(snapshot),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            if clone.returncode != 0:
+                raise RuntimeError(clone.stderr.strip() or "无法检查远端版本")
+            validate_snapshot(snapshot, repository_name(root))
+            return version(snapshot)
+    with urlopen(remote_version_url(root), timeout=15) as response:
+        if response.status != 200:
+            raise RuntimeError(f"版本检查返回HTTP {response.status}")
+        value = response.read(128).decode("utf-8").strip()
+    if not value:
+        raise RuntimeError("远端版本为空")
+    return value
+
+
+def update_check(root: Path, repository_url: str | None = None) -> dict[str, object]:
+    now = utc_now()
+    if not (root / ".git").is_dir():
+        identity = zip_identity(root)
+        if cached := cached_check(root, identity):
+            return cached
+        local_version = version(root)
+        try:
+            remote_version = zip_remote_version(root, repository_url)
+            available = local_version != remote_version
+            result = {
+                "schema_version": "onion_role_update_status_v1",
+                "status": "update_available" if available else "current",
+                "update_available": available,
+                "can_apply": available,
+                "install_type": "zip",
+                "checked_at": isoformat(now),
+                "checked_epoch": now.timestamp(),
+                "local_version": local_version,
+                "remote_version": remote_version,
+                "workspace_identity": identity,
+                "defer_until": None,
+                "defer_until_epoch": None,
+                "cached": False,
+            }
+        except (OSError, RuntimeError, subprocess.SubprocessError, URLError) as error:
+            result = {
+                "schema_version": "onion_role_update_status_v1",
+                "status": "check_failed",
+                "update_available": False,
+                "install_type": "zip",
+                "checked_at": isoformat(now),
+                "checked_epoch": now.timestamp(),
+                "local_version": local_version,
+                "remote_version": None,
+                "workspace_identity": identity,
+                "error": str(error),
+                "cached": False,
+            }
+        write_json(root / UPDATE_STATUS_RELATIVE, result)
+        return result
+
+    local_commit = "unknown"
+    identity = f"git:{version(root)}"
+    try:
+        local_commit = run(root, "rev-parse", "HEAD").stdout.strip()
+        identity = f"git:{local_commit}"
+        if cached := cached_check(root, identity):
+            return cached
+        run(root, "fetch", "--prune", "origin", "main")
+        remote_commit = run(root, "rev-parse", "origin/main").stdout.strip()
+        if local_commit == remote_commit:
+            status = "current"
+        elif run(
+            root, "merge-base", "--is-ancestor", local_commit, remote_commit, check=False
+        ).returncode == 0:
+            status = "update_available"
+        elif run(
+            root, "merge-base", "--is-ancestor", remote_commit, local_commit, check=False
+        ).returncode == 0:
+            status = "local_ahead"
+        else:
+            status = "diverged"
+        dirty = bool(run(root, "status", "--porcelain", "--", *MANAGED_PATHS).stdout.strip())
+        result = {
+            "schema_version": "onion_role_update_status_v1",
+            "status": status,
+            "update_available": status == "update_available",
+            "can_apply": status == "update_available" and not dirty,
+            "checked_at": isoformat(now),
+            "checked_epoch": now.timestamp(),
+            "local_version": version(root),
+            "remote_version": version(root, "origin/main"),
+            "workspace_identity": identity,
+            "local_commit": local_commit,
+            "remote_commit": remote_commit,
+            "managed_paths_dirty": dirty,
+            "defer_until": None,
+            "defer_until_epoch": None,
+            "cached": False,
+        }
+    except (OSError, subprocess.SubprocessError) as error:
+        result = {
+            "schema_version": "onion_role_update_status_v1",
+            "status": "check_failed",
+            "update_available": False,
+            "checked_at": isoformat(now),
+            "checked_epoch": now.timestamp(),
+            "local_version": version(root),
+            "workspace_identity": identity,
+            "local_commit": local_commit,
+            "error": str(error),
+            "cached": False,
+        }
+    write_json(root / UPDATE_STATUS_RELATIVE, result)
+    return result
+
+
+def snooze_update(root: Path, hours: int, repository_url: str | None = None) -> dict[str, object]:
+    if hours <= 0:
+        raise SystemExit("--snooze-hours必须大于0")
+    current = update_check(root, repository_url)
+    if not current.get("update_available") and current.get("status") != "deferred":
+        return current
+    deferred = dict(current)
+    until = utc_now() + timedelta(hours=hours)
+    deferred.update(
+        {
+            "status": "deferred",
+            "defer_until": isoformat(until),
+            "defer_until_epoch": until.timestamp(),
+            "cached": False,
+        }
+    )
+    write_json(root / UPDATE_STATUS_RELATIVE, deferred)
+    return deferred
+
+
+def record_current(root: Path) -> None:
+    if not (root / ".git").is_dir():
+        return
+    now = utc_now()
+    commit = run(root, "rev-parse", "HEAD").stdout.strip()
+    write_json(
+        root / UPDATE_STATUS_RELATIVE,
+        {
+            "schema_version": "onion_role_update_status_v1",
+            "status": "current",
+            "update_available": False,
+            "can_apply": False,
+            "checked_at": isoformat(now),
+            "checked_epoch": now.timestamp(),
+            "local_version": version(root),
+            "remote_version": version(root),
+            "workspace_identity": f"git:{commit}",
+            "local_commit": commit,
+            "remote_commit": commit,
+            "managed_paths_dirty": False,
+            "defer_until": None,
+            "defer_until_epoch": None,
+            "cached": False,
+        },
+    )
 
 
 def project_python(root: Path) -> Path | None:
@@ -71,11 +320,19 @@ def sync_dependencies(root: Path) -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="安全更新Codex角色项目")
-    parser.add_argument(
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument(
         "--adopt-git",
         action="store_true",
         help="把现有ZIP工作目录一次性接入对应公开GitHub仓库",
     )
+    actions.add_argument(
+        "--check", action="store_true", help="只读检查更新；24小时内复用缓存"
+    )
+    actions.add_argument(
+        "--apply", action="store_true", help="用户确认后安全快进更新；默认行为"
+    )
+    actions.add_argument("--snooze-hours", type=int, help="暂缓更新提示指定小时数")
     parser.add_argument("--project-root", type=Path)
     parser.add_argument(
         "--repository-url",
@@ -99,6 +356,8 @@ def file_hashes(root: Path) -> dict[str, str]:
             continue
         for path in sorted(directory.rglob("*")):
             if not path.is_file() or path.name == ".gitkeep":
+                continue
+            if path.resolve() == (root / UPDATE_STATUS_RELATIVE).resolve():
                 continue
             try:
                 path.resolve().relative_to(backup_root)
@@ -233,6 +492,7 @@ def adopt_git(root: Path, repository_url: str | None) -> int:
     print(f"workspace_adopt=ok repository={repository} branch=main")
     print(f"system_backup={backup}")
     print("以后对Codex说“更新项目到最新”即可，不需要重新下载ZIP。")
+    record_current(root)
     return 0
 
 
@@ -265,6 +525,7 @@ def update_git(root: Path) -> int:
     dependency_result = sync_dependencies(root)
     if dependency_result != 0:
         return dependency_result
+    record_current(root)
     print("workspace_update=ok")
     return 0
 
@@ -277,6 +538,19 @@ def main() -> int:
         else Path(__file__).resolve().parents[1]
     )
     if args.adopt_git:
+        return adopt_git(root, args.repository_url)
+    if args.check:
+        print(json.dumps(update_check(root, args.repository_url), ensure_ascii=False))
+        return 0
+    if args.snooze_hours is not None:
+        print(
+            json.dumps(
+                snooze_update(root, args.snooze_hours, args.repository_url),
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    if not (root / ".git").is_dir():
         return adopt_git(root, args.repository_url)
     return update_git(root)
 
