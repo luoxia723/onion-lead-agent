@@ -2,9 +2,9 @@
   "schema_version": "onion_role_workspace_release_v1",
   "role": "lead",
   "repository": "onion-lead-agent",
-  "workspace_version": "0.1.17",
-  "source_revision": "31a93f9593d0dd346c7903e85282053a41843f57",
-  "generated_at": "2026-08-30T11:21:50Z",
+  "workspace_version": "0.1.18",
+  "source_revision": "e79525a41113991f6d9d72d79d7932c1985c0b6e",
+  "generated_at": "2026-08-30T12:07:03Z",
   "skills": [
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
@@ -43,8 +43,13 @@
       "工作区/产物",
       "工作区/草稿",
       "工作区/审核",
-      "工作区/缓存",
-      ".runtime"
+      "工作区/缓存"
+    ],
+    "protected_runtime_scope": ".runtime中除系统管理路径外的全部任务文件",
+    "system_managed_runtime_paths": [
+      ".runtime/update-status.json",
+      ".runtime/system-backups",
+      ".runtime/venv"
     ]
   },
   "workflow_contract_sha256": "79a1667a0a461f4064960651708dd377fe3b0d77da638833ce9fdc477ee4c8d2",
@@ -54,7 +59,12 @@
     "工作区/产物",
     "工作区/草稿",
     "工作区/审核",
-    "工作区/缓存",
-    ".runtime"
+    "工作区/缓存"
+  ],
+  "runtime_state_directory": ".runtime",
+  "system_managed_runtime_paths": [
+    ".runtime/update-status.json",
+    ".runtime/system-backups",
+    ".runtime/venv"
   ]
 }

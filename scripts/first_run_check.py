@@ -118,6 +118,7 @@ def main() -> int:
         "产品资料/当前渠道投放口径.md",
         "scripts/doctor.py",
         "scripts/update_workspace.py",
+        "scripts/workspace_contract.py",
     )
     missing = [relative for relative in required if not (root / relative).is_file()]
     add(results, "项目文件", "error" if missing else "ok", "缺少：" + "、".join(missing) if missing else "首次使用、更新和产品事实文件齐全")

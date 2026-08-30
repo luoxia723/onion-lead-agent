@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.17`，来源提交 `31a93f9593d0dd346c7903e85282053a41843f57`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.18`，来源提交 `e79525a41113991f6d9d72d79d7932c1985c0b6e`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
@@ -58,7 +58,7 @@
 
 1. 运行`python scripts/update_workspace.py --check`；脚本在`.runtime/update-status.json`缓存24小时，不重复联网；
 2. 返回`current`、`deferred`或`check_failed`时不打扰用户，继续任务；检查失败不阻塞普通业务；
-3. 返回`update_available`时只询问一次是否现在更新，并说明不会修改`工作区/`和`.runtime/`中的用户文件；
+3. 返回`update_available`时只询问一次是否现在更新，并说明不会修改`工作区/`或`.runtime/`中的任务文件；
 4. 用户同意后运行`python scripts/update_workspace.py --apply`；用户说稍后时运行`python scripts/update_workspace.py --snooze-hours 24`，要求一周不提醒时使用`168`；
 5. 正在执行任务时不检查、不更新；不得因检查更新增加付费调用或中断当前任务。
 
@@ -72,8 +72,8 @@
 ## 文件所有权
 
 - 系统维护区：`AGENTS.md`、`README.md`、`首次使用.md`、`连接Agent.command`、`连接Agent.cmd`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`、`VERSION`、`发行信息.json`、`角色清单.json`；
-- 用户工作区：`工作区/输入/`、`工作区/产物/`、`工作区/草稿/`、`工作区/审核/`、`工作区/缓存/`和`.runtime/`；
-- 用户工作区被Git忽略，更新不得进入这些目录；
+- 用户工作区：`工作区/输入/`、`工作区/产物/`、`工作区/草稿/`、`工作区/审核/`和`工作区/缓存/`，更新不得进入；
+- 本地运行区：`.runtime/`被Git忽略；系统脚本只管理`venv/`、`update-status.json`和`system-backups/`，其他任务文件在更新前后必须保持不变；
 - API密钥、OAuth Token、数据库连接、SSH私钥和对象存储凭据不得写入仓库或产物。
 
 ## 运行

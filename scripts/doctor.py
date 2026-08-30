@@ -138,6 +138,8 @@ def main() -> int:
         errors.append("缺少首次环境检查脚本")
     if not (root / "scripts" / "artifact_workspace.py").is_file():
         errors.append("缺少统一产物目录脚本")
+    if not (root / "scripts" / "workspace_contract.py").is_file():
+        errors.append("缺少角色工作区机器合同")
     if not (root / ".agents" / "references" / "artifact-layout.json").is_file():
         errors.append("缺少统一产物目录合同")
     dirty = git_managed_dirty(root)

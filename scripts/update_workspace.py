@@ -15,6 +15,18 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 
+SCRIPT_DIRECTORY = Path(__file__).resolve().parent
+if str(SCRIPT_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIRECTORY))
+
+from workspace_contract import (  # noqa: E402
+    SYSTEM_BACKUP_PATH,
+    SYSTEM_MANAGED_RUNTIME_PATHS,
+    UPDATE_STATUS_PATH,
+    remote_version_is_newer,
+)
+
+
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")
@@ -51,8 +63,8 @@ USER_ROOTS = (
     ".runtime",
 )
 USER_MARKERS = tuple(f"{path}/.gitkeep" for path in USER_ROOTS)
-BACKUP_RELATIVE = Path(".runtime") / "system-backups"
-UPDATE_STATUS_RELATIVE = Path(".runtime") / "update-status.json"
+BACKUP_RELATIVE = Path(SYSTEM_BACKUP_PATH)
+UPDATE_STATUS_RELATIVE = Path(UPDATE_STATUS_PATH)
 CHECK_TTL_SECONDS = 24 * 60 * 60
 
 
@@ -98,11 +110,13 @@ def cached_check(root: Path, workspace_identity: str) -> dict[str, object] | Non
         defer_until_epoch = float(cached.get("defer_until_epoch") or 0)
     except (TypeError, ValueError):
         return None
-    if time.time() - checked_epoch >= CHECK_TTL_SECONDS:
+    now = time.time()
+    deferred = bool(cached.get("update_available")) and defer_until_epoch > now
+    if not deferred and now - checked_epoch >= CHECK_TTL_SECONDS:
         return None
     result = dict(cached)
     if result.get("update_available"):
-        result["status"] = "deferred" if defer_until_epoch > time.time() else "update_available"
+        result["status"] = "deferred" if deferred else "update_available"
     result["cached"] = True
     return result
 
@@ -159,7 +173,7 @@ def update_check(root: Path, repository_url: str | None = None) -> dict[str, obj
         local_version = version(root)
         try:
             remote_version = zip_remote_version(root, repository_url)
-            available = local_version != remote_version
+            available = remote_version_is_newer(local_version, remote_version)
             result = {
                 "schema_version": "onion_role_update_status_v1",
                 "status": "update_available" if available else "current",
@@ -175,7 +189,7 @@ def update_check(root: Path, repository_url: str | None = None) -> dict[str, obj
                 "defer_until_epoch": None,
                 "cached": False,
             }
-        except (OSError, RuntimeError, subprocess.SubprocessError, URLError) as error:
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError, URLError) as error:
             result = {
                 "schema_version": "onion_role_update_status_v1",
                 "status": "check_failed",
@@ -349,7 +363,7 @@ def run(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
 
 def file_hashes(root: Path) -> dict[str, str]:
     result: dict[str, str] = {}
-    backup_root = (root / BACKUP_RELATIVE).resolve()
+    system_paths = tuple((root / relative).resolve() for relative in SYSTEM_MANAGED_RUNTIME_PATHS)
     for relative in USER_ROOTS:
         directory = root / relative
         if not directory.exists():
@@ -357,15 +371,21 @@ def file_hashes(root: Path) -> dict[str, str]:
         for path in sorted(directory.rglob("*")):
             if not path.is_file() or path.name == ".gitkeep":
                 continue
-            if path.resolve() == (root / UPDATE_STATUS_RELATIVE).resolve():
+            resolved = path.resolve()
+            if any(
+                resolved == system_path or system_path in resolved.parents
+                for system_path in system_paths
+            ):
                 continue
-            try:
-                path.resolve().relative_to(backup_root)
-                continue
-            except ValueError:
-                pass
             result[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
     return result
+
+
+def protected_files_unchanged(root: Path, before: dict[str, str]) -> bool:
+    if before == file_hashes(root):
+        return True
+    print("用户工作区或任务运行文件发生变化，更新合同失败。")
+    return False
 
 
 def remove_entry(path: Path) -> None:
@@ -406,6 +426,7 @@ def validate_snapshot(snapshot: Path, expected_repository: str) -> None:
         "AGENTS.md",
         ".codex/config.toml",
         "scripts/update_workspace.py",
+        "scripts/workspace_contract.py",
         "角色清单.json",
     )
     missing = [relative for relative in required if not (snapshot / relative).is_file()]
@@ -476,7 +497,7 @@ def adopt_git(root: Path, repository_url: str | None) -> int:
             ).stdout.strip()
             if dirty:
                 raise RuntimeError("接入后系统维护区不干净：\n" + dirty)
-            if file_hashes(root) != before:
+            if not protected_files_unchanged(root, before):
                 raise RuntimeError("接入过程中用户工作区发生变化")
             doctor = subprocess.run(
                 [sys.executable, str(root / "scripts" / "doctor.py"), "--offline"],
@@ -484,9 +505,14 @@ def adopt_git(root: Path, repository_url: str | None) -> int:
             )
             if doctor.returncode != 0:
                 raise RuntimeError("接入后仓库完整性检查失败")
+            dependency_result = sync_dependencies(root)
+            if dependency_result != 0:
+                raise RuntimeError("接入后项目依赖同步失败")
+            if not protected_files_unchanged(root, before):
+                raise RuntimeError("接入后用户文件校验失败")
         except Exception as error:
             rollback_snapshot(root, backup)
-            if file_hashes(root) != before:
+            if not protected_files_unchanged(root, before):
                 raise SystemExit("接入失败且用户文件校验异常，请保留现场联系管理员")
             raise SystemExit(f"接入失败，系统文件已恢复：{error}") from error
     print(f"workspace_adopt=ok repository={repository} branch=main")
@@ -513,16 +539,19 @@ def update_git(root: Path) -> int:
         print("本地分支与origin/main发生分叉，已停止；不会reset或覆盖。")
         return 3
     run(root, "merge", "--ff-only", "origin/main")
-    if before != file_hashes(root):
-        print("用户工作区文件在更新中发生变化，更新合同失败。")
+    if not protected_files_unchanged(root, before):
         return 4
     doctor = subprocess.run(
         [sys.executable, str(root / "scripts" / "doctor.py"), "--offline"],
         cwd=root,
     )
     if doctor.returncode != 0:
+        if not protected_files_unchanged(root, before):
+            return 4
         return doctor.returncode
     dependency_result = sync_dependencies(root)
+    if not protected_files_unchanged(root, before):
+        return 4
     if dependency_result != 0:
         return dependency_result
     record_current(root)
