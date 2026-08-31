@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.20`，来源提交 `b3fccbbec2cef1717ec089135c3de4f65f18119d`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.21`，来源提交 `02277c998353add90bc7442882126f58bf641a51`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
@@ -70,6 +70,10 @@
 3. 更新后脚本自动运行`python scripts/doctor.py --offline`；
 4. 接入和更新前后都校验用户文件哈希，不移动、不删除、不改写用户工作区中的任何既有文件。
 
+## 连接故障诊断
+
+MCP、浏览器认证、数据查询或更新失败时，先运行`python scripts/diagnose_connection.py`；已有结构化错误时只把错误码或简短错误文本传给`--error-text`，不要传Token、业务正文或完整日志。只有结果为`oauth_required`才引导用户重新Authenticate并申请新的一次性Token。`business_query_failed`、`client_network`、`service_unavailable`、`local_policy_blocked`和`update_check_failed`都不得用重新填Token代替处理。
+
 ## 文件所有权
 
 - 系统维护区：`AGENTS.md`、`README.md`、`首次使用.md`、`连接Agent.command`、`连接Agent.cmd`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`、`VERSION`、`发行信息.json`、`角色清单.json`；
@@ -80,3 +84,5 @@
 ## 运行
 
 按“Skill 路由与上下文”执行。付费、上传、写入和媒体生成继续遵守所选Skill的当前任务确认门禁；所有正式产物写入`工作区/产物/`，不得写回`.agents/`。
+
+四类报告只能通过`python scripts/artifact_workspace.py report-delivery --task-root <任务目录>`进入`pending_review`。在用户实际看过并明确采用前，不得标记采纳、生成最终ZIP或自动进入购买动因/内容生产；明确采用后才运行`report-accept --approved-in-current-task`。

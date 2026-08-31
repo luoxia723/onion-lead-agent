@@ -136,6 +136,8 @@ def main() -> int:
         errors.append("缺少包内首次使用说明")
     if not (root / "scripts" / "first_run_check.py").is_file():
         errors.append("缺少首次环境检查脚本")
+    if not (root / "scripts" / "diagnose_connection.py").is_file():
+        errors.append("缺少连接故障分类脚本")
     if not (root / "scripts" / "artifact_workspace.py").is_file():
         errors.append("缺少统一产物目录脚本")
     if not (root / "scripts" / "workspace_contract.py").is_file():

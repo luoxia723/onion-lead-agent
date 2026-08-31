@@ -8,6 +8,9 @@ import html
 import json
 import re
 import secrets
+import shutil
+import subprocess
+import sys
 import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
@@ -434,6 +437,14 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
     contract = load_contract()
     task_root = args.task_root.expanduser().resolve()
     index = load_index(task_root, contract)
+    if (
+        index["artifact_code"] in {"EDR", "IDR", "ECR", "ICR"}
+        and args.status != "draft"
+        and not getattr(args, "report_gate", False)
+    ):
+        raise RuntimeError(
+            "四类报告只能通过report-delivery或report-accept改变审核状态"
+        )
     version = args.version or index["current_version"]
     manifest_path, manifest = version_manifest(task_root, version)
     version_root = task_root / version
@@ -450,6 +461,12 @@ def package(args: argparse.Namespace) -> dict[str, Any]:
     task_root = args.task_root.expanduser().resolve()
     index = load_index(task_root, contract)
     version = args.version or index["current_version"]
+    _, task_manifest = version_manifest(task_root, version)
+    if (
+        index["artifact_code"] in {"EDR", "IDR", "ECR", "ICR"}
+        and task_manifest.get("status") != "accepted"
+    ):
+        raise RuntimeError("四类报告只有人工采纳后才能生成最终ZIP")
     delivery = task_root / version / "04_交付"
     files = [path for path in sorted(delivery.rglob("*")) if path.is_file()]
     if not files:
@@ -474,6 +491,7 @@ def package(args: argparse.Namespace) -> dict[str, Any]:
         "artifact_code": index["artifact_code"],
         "artifact_label": index["artifact_label"],
         "version": version,
+        "review_status": task_manifest.get("status"),
         "files": entries,
     }
     root_name = f"{index['file_stem']}_{version}"
@@ -492,6 +510,232 @@ def package(args: argparse.Namespace) -> dict[str, Any]:
     return {"zip": str(output), "manifest": str(manifest_path), "zip_sha256": sha256(output), "file_count": len(files)}
 
 
+def _report_validator(project_root: Path, skill: str) -> Path:
+    candidates = (
+        project_root / "Skills" / "02_策略相关" / skill / "scripts" / "validate_report.py",
+        project_root / ".agents" / "skills" / skill / "scripts" / "validate_report.py",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise RuntimeError(f"找不到{skill}正式报告校验器")
+
+
+def _online_workbench_errors(urls: list[str], *, timeout: int, concurrency: int) -> list[str]:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
+        results = list(
+            pool.map(lambda url: online_workbench_check(url, timeout=timeout), urls)
+        )
+    return [error for error in results if error]
+
+
+def _validate_report_gate(
+    *,
+    report: Path,
+    index: dict[str, Any],
+    project_root: Path,
+    timeout: int,
+    online_concurrency: int,
+) -> dict[str, Any]:
+    validator = _report_validator(project_root, str(index["skill"]))
+    checked = subprocess.run(
+        [sys.executable, str(validator), str(report)],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if checked.returncode != 0:
+        raise RuntimeError(
+            "正式报告合同未通过：" + (checked.stdout + checked.stderr).strip()
+        )
+    links = check_markdown_links(report, project_root=project_root)
+    if links["errors"]:
+        raise RuntimeError("正式报告链接未通过：" + "；".join(links["errors"]))
+    urls = sorted(set(links["workbench_urls"]))
+    online_errors = _online_workbench_errors(
+        urls,
+        timeout=timeout,
+        concurrency=online_concurrency,
+    )
+    if online_errors:
+        raise RuntimeError("工作台在线回查未通过：" + "；".join(online_errors))
+    return {
+        "validator": validator,
+        "contract_result": checked.stdout.strip(),
+        "links": links,
+        "urls": urls,
+    }
+
+
+def deliver_report(args: argparse.Namespace) -> dict[str, Any]:
+    """Validate and package one report without leaving a partial delivery."""
+
+    contract = load_contract()
+    task_root = args.task_root.expanduser().resolve()
+    index = load_index(task_root, contract)
+    if index["artifact_code"] not in {"EDR", "IDR", "ECR", "ICR"}:
+        raise RuntimeError("report-delivery只适用于四类正式报告")
+    version = args.version or index["current_version"]
+    version_root = task_root / version
+    candidate_dir = version_root / "03_候选"
+    delivery_dir = version_root / "04_交付"
+    candidates = sorted(candidate_dir.glob("*.md"))
+    if len(candidates) != 1:
+        raise RuntimeError(f"03_候选必须且只能有一份Markdown报告，当前{len(candidates)}份")
+    if any(path.is_file() for path in delivery_dir.rglob("*")):
+        raise RuntimeError("04_交付不为空；修改报告请创建新版本，不能覆盖")
+    candidate = candidates[0]
+    project_root = find_project_root(args.project_root)
+    gate = _validate_report_gate(
+        report=candidate,
+        index=index,
+        project_root=project_root,
+        timeout=args.timeout,
+        online_concurrency=args.online_concurrency,
+    )
+
+    destination = delivery_dir / candidate.name
+    receipt_path = version_root / "05_质检" / "正式报告交付验收.json"
+    manifest_path, _ = version_manifest(task_root, version)
+    original_manifest = manifest_path.read_bytes()
+    try:
+        shutil.copy2(candidate, destination)
+        write_json(
+            receipt_path,
+            {
+                "schema_version": "onion_report_delivery_check_v1",
+                "report": destination.name,
+                "report_sha256": sha256(destination),
+                "contract_validator": str(
+                    gate["validator"].relative_to(project_root)
+                ),
+                "contract_result": gate["contract_result"],
+                "link_count": gate["links"]["checked"],
+                "workbench_link_count": gate["links"]["workbench"],
+                "online_workbench_count": len(gate["urls"]),
+                "review_status": "pending_review",
+            },
+        )
+        finalize(
+            argparse.Namespace(
+                task_root=task_root,
+                version=version,
+                status="pending_review",
+                report_gate=True,
+            )
+        )
+        validation = validate(
+            argparse.Namespace(
+                task_root=task_root,
+                project_root=project_root,
+                version=version,
+            )
+        )
+        if not validation["ok"]:
+            raise RuntimeError("产物合同未通过：" + "；".join(validation["errors"]))
+    except Exception:
+        for path in (destination, receipt_path):
+            if path.exists():
+                path.unlink()
+        manifest_path.write_bytes(original_manifest)
+        raise
+    return {
+        "ok": True,
+        "task_id": index["task_id"],
+        "version": version,
+        "status": "pending_review",
+        "report": str(destination),
+        "report_sha256": sha256(destination),
+        "online_workbench_count": len(gate["urls"]),
+    }
+
+
+def accept_report(args: argparse.Namespace) -> dict[str, Any]:
+    """Record explicit human approval, revalidate, then build the final package."""
+
+    if not args.approved_in_current_task:
+        raise RuntimeError("人工采纳必须显式传--approved-in-current-task")
+    contract = load_contract()
+    task_root = args.task_root.expanduser().resolve()
+    index = load_index(task_root, contract)
+    if index["artifact_code"] not in {"EDR", "IDR", "ECR", "ICR"}:
+        raise RuntimeError("report-accept只适用于四类正式报告")
+    version = args.version or index["current_version"]
+    version_root = task_root / version
+    manifest_path, manifest = version_manifest(task_root, version)
+    if manifest.get("status") != "pending_review":
+        raise RuntimeError("只有pending_review报告可以人工采纳")
+    reports = sorted((version_root / "04_交付").glob("*.md"))
+    if len(reports) != 1:
+        raise RuntimeError("04_交付必须且只能有一份Markdown报告")
+    report = reports[0]
+    project_root = find_project_root(args.project_root)
+    _validate_report_gate(
+        report=report,
+        index=index,
+        project_root=project_root,
+        timeout=args.timeout,
+        online_concurrency=args.online_concurrency,
+    )
+
+    receipt_path = version_root / "05_质检" / "人工审核采纳.json"
+    if receipt_path.exists():
+        raise RuntimeError("人工审核采纳回执已存在，不重复写入")
+    original_manifest = manifest_path.read_bytes()
+    package_dir = version_root / "06_打包"
+    package_before = {path.resolve() for path in package_dir.iterdir() if path.is_file()}
+    try:
+        write_json(
+            receipt_path,
+            {
+                "schema_version": "onion_report_human_review_v1",
+                "status": "accepted",
+                "report": report.name,
+                "report_sha256": sha256(report),
+                "approved_in_current_task": True,
+                "accepted_at": datetime.now(
+                    contract_timezone(contract["timezone"])
+                ).isoformat(timespec="seconds"),
+            },
+        )
+        finalize(
+            argparse.Namespace(
+                task_root=task_root,
+                version=version,
+                status="accepted",
+                report_gate=True,
+            )
+        )
+        validation = validate(
+            argparse.Namespace(
+                task_root=task_root,
+                project_root=project_root,
+                version=version,
+            )
+        )
+        if not validation["ok"]:
+            raise RuntimeError("采纳前产物合同未通过：" + "；".join(validation["errors"]))
+        packaged = package(argparse.Namespace(task_root=task_root, version=version))
+    except Exception:
+        if receipt_path.exists():
+            receipt_path.unlink()
+        for path in package_dir.iterdir():
+            if path.is_file() and path.resolve() not in package_before:
+                path.unlink()
+        manifest_path.write_bytes(original_manifest)
+        raise
+    return {
+        "ok": True,
+        "task_id": index["task_id"],
+        "version": version,
+        "status": "accepted",
+        "report": str(report),
+        "report_sha256": sha256(report),
+        **packaged,
+    }
+
+
 def validate(args: argparse.Namespace) -> dict[str, Any]:
     contract = load_contract()
     task_root = args.task_root.expanduser().resolve()
@@ -499,7 +743,12 @@ def validate(args: argparse.Namespace) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     project_root = find_project_root(args.project_root)
-    for version in index["versions"]:
+    requested_version = getattr(args, "version", None)
+    versions = [requested_version] if requested_version else index["versions"]
+    if requested_version and requested_version not in index["versions"]:
+        errors.append(f"版本不在任务索引中:{requested_version}")
+        versions = []
+    for version in versions:
         if not re.fullmatch(contract["version_pattern"], version):
             errors.append(f"版本名无效:{version}")
             continue
@@ -562,6 +811,7 @@ def parser() -> argparse.ArgumentParser:
     check = sub.add_parser("validate")
     check.add_argument("--task-root", type=Path, required=True)
     check.add_argument("--project-root", type=Path)
+    check.add_argument("--version")
     check.set_defaults(handler=validate)
     links = sub.add_parser("check-links")
     links.add_argument("--path", type=Path, required=True)
@@ -570,6 +820,21 @@ def parser() -> argparse.ArgumentParser:
     links.add_argument("--timeout", type=int, default=15)
     links.add_argument("--online-concurrency", type=int, choices=range(1, 17), default=8)
     links.set_defaults(handler=check_links)
+    report = sub.add_parser("report-delivery")
+    report.add_argument("--task-root", type=Path, required=True)
+    report.add_argument("--version")
+    report.add_argument("--project-root", type=Path)
+    report.add_argument("--timeout", type=int, default=15)
+    report.add_argument("--online-concurrency", type=int, choices=range(1, 17), default=8)
+    report.set_defaults(handler=deliver_report)
+    accept = sub.add_parser("report-accept")
+    accept.add_argument("--task-root", type=Path, required=True)
+    accept.add_argument("--version")
+    accept.add_argument("--project-root", type=Path)
+    accept.add_argument("--approved-in-current-task", action="store_true")
+    accept.add_argument("--timeout", type=int, default=15)
+    accept.add_argument("--online-concurrency", type=int, choices=range(1, 17), default=8)
+    accept.set_defaults(handler=accept_report)
     return root
 
 

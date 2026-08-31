@@ -10,7 +10,7 @@
 
 第一次打开后直接对Codex说“初始化项目环境”。Codex会按Windows/macOS选择包内脚本，检查Python、Git、项目文件和MCP配置；取得确认后可以安装缺失的Python/Git并创建项目内`.runtime/venv`。包含APP图片Skill的角色会在该venv安装锁定的Pillow；Node.js、FFmpeg和云厂商SDK不是正式角色依赖。
 
-只读环境检查：对Codex说“运行首次环境检查”，或运行 `python scripts/first_run_check.py`。
+只读环境检查：对Codex说“运行首次环境检查”，或运行 `python scripts/first_run_check.py`。连接、认证、取数或更新出现问题时运行`python scripts/diagnose_connection.py`；只有诊断为`oauth_required`才重新申请Token。
 
 日常只在`工作区/`中放输入、草稿、审核记录和产物。系统目录由主仓库自动更新，不要手工修改。
 

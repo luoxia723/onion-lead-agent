@@ -117,6 +117,7 @@ def main() -> int:
         "产品资料/产品事实与卖点.md",
         "产品资料/当前渠道投放口径.md",
         "scripts/doctor.py",
+        "scripts/diagnose_connection.py",
         "scripts/update_workspace.py",
         "scripts/workspace_contract.py",
     )
