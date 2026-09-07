@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<!--
+SETS_DATA schema:
+{
+  "request_id": "string",
+  "schemes": [{
+    "id": "set1",
+    "imageForm": "single | double | triple",
+    "decision": "accepted | rejected | pending",
+    "images": [{"index": 1, "path": "/tmp/.../set1_img1.png", "role": "base | branch"}],
+    "annotation": {"decision": "accepted | rejected"}
+  }]
+}
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>洋葱投放图片选择 - {{REQUEST_ID}}</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --body: #333;
+      --muted: #888;
+      --hairline: #e5e5e5;
+      --surface-soft: #f7f8fa;
+      --primary: #e8835a;       /* 洋葱橙 */
+      --primary-bg: #fff5ef;
+      --danger: #d9534f;
+      --danger-bg: #fef2f2;
+      --success: #4caf50;
+      --success-bg: #f0fdf4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--surface-soft);
+      color: var(--body);
+      font-size: 14px;
+    }
+    /* === 顶部栏 === */
+    .topbar {
+      background: white;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--hairline);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar h1 { margin: 0; font-size: 17px; color: var(--ink); }
+    .topbar .meta { color: var(--muted); font-size: 12px; }
+    .topbar .progress { margin-left: auto; font-size: 13px; }
+    .topbar .progress strong { color: var(--ink); }
+
+    /* === 3 栏布局 === */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr) 320px;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 180px minmax(0, 1fr); }
+      .right-aside { grid-column: 2; }
+    }
+
+    /* === 通用面板 === */
+    .panel {
+      background: white;
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .panel h3 { margin: 0 0 12px 0; font-size: 14px; color: var(--ink); font-weight: 500; }
+
+    /* === 左：方案列表 === */
+    .scheme-list {
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+    }
+    .scheme-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      margin-bottom: 4px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: left;
+    }
+    .scheme-item:hover { background: var(--surface-soft); color: var(--ink); }
+    .scheme-item.active { background: var(--primary-bg); color: var(--primary); font-weight: 500; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      color: var(--muted);
+    }
+    .badge.pending { background: #f0f0f0; color: var(--muted); }
+    .badge.accepted { background: var(--success-bg); color: var(--success); }
+    .badge.rejected { background: var(--danger-bg); color: var(--danger); }
+
+    /* === 中：主预览 === */
+    .main h3 { display: flex; align-items: center; gap: 12px; }
+    .main h3 .meta-badges { margin-left: auto; display: flex; gap: 6px; }
+    .images {
+      display: grid;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    /* 自适应 1/2/3 列（按 assets 数量动态切换 class） */
+    .images.cols-1 { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .images.cols-2 { grid-template-columns: 1fr 1fr; }
+    .images.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .image-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .image-cell img {
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+      border: 1px solid var(--hairline);
+      cursor: zoom-in;
+      transition: transform 0.15s;
+      background: white;
+    }
+    .image-cell img:hover { transform: scale(1.01); border-color: var(--primary); }
+    .image-cell label {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .image-cell label.checked { color: var(--danger); }
+    .image-cell input[type="checkbox"] { cursor: pointer; }
+
+    /* === 来源信息（折叠） === */
+    .source-box {
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--surface-soft);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .source-box .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+    .review-findings {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: #fff8e8;
+      border: 1px solid #f2d690;
+      color: #72520a;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .review-findings strong { display: block; margin-bottom: 2px; }
+    details summary { cursor: pointer; font-size: 12px; color: var(--primary); padding: 4px 0; }
+    details[open] summary { color: var(--ink); }
+
+    /* === 上一候选/下一候选 === */
+    .nav-row {
+      margin-top: 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* === 右：选择操作 === */
+    .btn {
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--hairline);
+      cursor: pointer;
+      font-size: 13px;
+      background: white;
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn:hover { border-color: var(--primary); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+    .btn-primary:hover { background: #d97048; border-color: #d97048; }
+    .btn-danger { color: var(--danger); border-color: var(--danger); }
+    .btn-danger:hover { background: var(--danger-bg); }
+    .btn-block { width: 100%; justify-content: center; }
+    .btn .key {
+      font-size: 11px;
+      padding: 1px 6px;
+      background: rgba(0,0,0,0.08);
+      border-radius: 3px;
+      color: inherit;
+    }
+    .btn-primary .key { background: rgba(255,255,255,0.25); }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 12px;
+      border: 1px solid var(--hairline);
+      border-radius: 20px;
+      cursor: pointer;
+      color: var(--muted);
+      margin: 2px;
+      background: white;
+    }
+    .pill:hover { border-color: var(--primary); }
+    .pill.active { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+
+    .field { margin-top: 14px; }
+    .field label { display: block; font-size: 12px; color: var(--ink); margin-bottom: 6px; }
+    .field textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: 8px;
+      border: 1px solid var(--hairline);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+    }
+    .field textarea:focus { outline: none; border-color: var(--primary); }
+
+    .hotkey-help {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--hairline);
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .hotkey-help span { display: inline-flex; align-items: center; gap: 3px; }
+    .hotkey-help kbd {
+      background: var(--surface-soft);
+      border: 1px solid var(--hairline);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 10px;
+      font-family: inherit;
+    }
+
+    /* === 底部提交栏 === */
+    .submit-bar {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      border-top: 1px solid var(--hairline);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 -1px 4px rgba(0,0,0,0.04);
+    }
+    .submit-bar .status { color: var(--muted); font-size: 12px; }
+    .submit-bar .actions { margin-left: auto; display: flex; gap: 8px; }
+
+    /* === 灯箱 === */
+    .lightbox {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      cursor: zoom-out;
+    }
+    .lightbox.show { display: flex; }
+    .lightbox img { max-width: 95vw; max-height: 95vh; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>🍿 洋葱投放图片选择</h1>
+    <span class="meta">Request {{REQUEST_ID}}</span>
+    <span class="progress">已选择 <strong id="done-count">0</strong> / <strong id="total-count">0</strong> 个候选</span>
+  </div>
+
+  <div class="layout">
+    <!-- 左栏：方案列表 -->
+    <aside class="panel scheme-list" id="scheme-list">
+      <h3>方案列表</h3>
+      <div id="scheme-list-items"></div>
+    </aside>
+
+    <!-- 中栏：主预览 -->
+    <article class="panel main" id="main-panel">
+      <!-- JS 填充 -->
+    </article>
+
+    <!-- 右栏：选择操作 -->
+    <aside class="panel right-aside" id="annotation-panel">
+      <h3>候选选择</h3>
+      <p style="font-size: 12px; color: var(--muted); margin: 6px 0 14px;">
+        直接选择采纳或不采纳，不需要填写理由；选择后自动进入下一个候选。
+      </p>
+
+      <div class="actions" style="display: grid; gap: 8px;">
+        <button class="btn btn-primary btn-block" id="btn-accept">采纳 <span class="key">Y</span></button>
+        <button class="btn btn-danger btn-block" id="btn-reject">不采纳 <span class="key">N</span></button>
+      </div>
+
+      <div class="hotkey-help">
+        <span><kbd>Y</kbd> / <kbd>Enter</kbd> 采纳</span>
+        <span><kbd>N</kbd> 不采纳</span>
+        <span><kbd>←</kbd> / <kbd>K</kbd> 上一候选</span>
+        <span><kbd>→</kbd> / <kbd>J</kbd> 下一候选</span>
+        <span><kbd>Esc</kbd> 清空</span>
+      </div>
+    </aside>
+  </div>
+
+  <div class="submit-bar">
+    <span class="status" id="submit-status">为所有候选选择采纳或不采纳后提交</span>
+    <div class="actions">
+      <button class="btn" onclick="resetAll()">全部清空</button>
+      <button id="submitAllButton" class="btn btn-primary" onclick="submitAll()">提交选择结果</button>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox" onclick="this.classList.remove('show')">
+    <img id="lightbox-img" alt="">
+  </div>
+
+  <script>
+    /**
+     * SETS_DATA 由 onion-image 读取模板时替换。结构：
+     * [
+     *   { set_id: "set1", thumb: ["set1_img1.png", "set1_img2.png", "set1_img3.png"],
+     *     meta: { channel: "应用商店", form: "三图", ratio: "3:2", ip: "豆包", style: "...", placement: "..." },
+     *     source: { copyId: "C-104", copySummary: "短句1/2/3 文本", directionId: "D-007", direction: "..." } }
+     * ]
+     */
+    let SETS = {{SETS_DATA}};
+    const stateById = new Map();
+    let curIndex = 0;
+    let submitInFlight = false;
+
+    function emptyState(setId) {
+      return {
+        id: setId,
+        decision: null,        // 'accepted' | 'rejected' | null
+      };
+    }
+
+    function syncStateWithSets() {
+      SETS.forEach(s => {
+        if (!stateById.has(s.set_id)) stateById.set(s.set_id, emptyState(s.set_id));
+      });
+      if (curIndex >= SETS.length) curIndex = Math.max(SETS.length - 1, 0);
+    }
+
+    function stateForIndex(index) {
+      const set = SETS[index];
+      if (!set) return emptyState('');
+      if (!stateById.has(set.set_id)) stateById.set(set.set_id, emptyState(set.set_id));
+      return stateById.get(set.set_id);
+    }
+
+    function totalCount() { return SETS.length; }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    syncStateWithSets();
+
+    // === 渲染左栏 ===
+    function renderSchemeList() {
+      const html = SETS.map((s, i) => {
+        const st = stateForIndex(i).decision;
+        const badge = st === 'accepted' ? '<span class="badge accepted">采纳</span>' :
+                       st === 'rejected' ? '<span class="badge rejected">不采纳</span>' :
+                       '<span class="badge pending">待标</span>';
+        return `<button class="scheme-item ${i === curIndex ? 'active' : ''}" onclick="selectIndex(${i})">
+                  <span>候选 ${i + 1}: ${s.set_id}</span>${badge}
+                </button>`;
+      }).join('');
+      document.getElementById('scheme-list-items').innerHTML = html;
+    }
+
+    // === 渲染主栏 ===
+    function renderMain() {
+      const s = SETS[curIndex];
+      if (!s) {
+        document.getElementById('main-panel').innerHTML = '<h3>等待图片生成</h3><p style="color: var(--muted);">图片生成后会自动出现在这里。</p>';
+        return;
+      }
+      const st = stateForIndex(curIndex);
+      const n = s.thumb.length;
+      const colClass = `cols-${Math.min(n, 3)}`;
+
+      const metaBadges = [
+        s.meta.channel, s.meta.form, s.meta.ratio,
+        s.meta.ip ? `IP·${s.meta.ip}` : null,
+        s.meta.placement || null,
+      ].filter(Boolean).map(x => `<span class="badge">${x}</span>`).join('');
+
+      const imagesHtml = s.thumb.map((p, idx) => {
+        const i = idx + 1;
+        return `
+          <div class="image-cell">
+            <img src="${p}" alt="图 ${i}" onclick="showLightbox('${p}')">
+            ${n > 1 ? `<label>图 ${i}</label>` : ''}
+          </div>`;
+      }).join('');
+
+      const sourceHtml = s.source ? `
+        <section class="source-box">
+          <div class="label">来源文案 · ${s.source.copyId || ''}</div>
+          <p style="margin: 4px 0 0;">${s.source.copySummary || '-'}</p>
+          ${s.source.direction ? `
+            <details style="margin-top: 8px;">
+              <summary>展开来源方向：${s.source.directionId || ''}</summary>
+              <p style="margin: 6px 0 0; font-size: 12px; color: var(--muted);">${s.source.direction}</p>
+            </details>` : ''}
+        </section>` : '';
+
+      const reviewFindings = Array.isArray(s.meta.review_findings) ? s.meta.review_findings : [];
+      const findingsHtml = reviewFindings.length ? `
+        <section class="review-findings">
+          <strong>候选提示（仅供选择参考，不代表淘汰）</strong>
+          ${reviewFindings.map(item => `<div>• ${escapeHtml(item)}</div>`).join('')}
+        </section>` : '';
+
+      const navHtml = `
+        <div class="nav-row">
+          <button class="btn" ${curIndex === 0 ? 'disabled' : ''} onclick="selectIndex(${curIndex - 1})">◀ 上一候选 <span class="key">←</span></button>
+          <button class="btn" ${curIndex >= totalCount() - 1 ? 'disabled' : ''} onclick="selectIndex(${curIndex + 1})">下一候选 ▶ <span class="key">→</span></button>
+        </div>`;
+
+      document.getElementById('main-panel').innerHTML = `
+        <h3>
+          <span>候选 ${curIndex + 1} / ${totalCount()}</span>
+          <span class="meta-badges">${metaBadges}</span>
+        </h3>
+        <div class="images ${colClass}">${imagesHtml}</div>
+        ${findingsHtml}
+        ${sourceHtml}
+        ${navHtml}`;
+    }
+
+    // === 渲染右栏 ===
+    function renderRightPanel() {
+      const isSingle = (SETS[curIndex]?.thumb?.length || 0) === 1;
+      document.getElementById('btn-accept').childNodes[0].nodeValue = isSingle ? '采纳此图 ' : '采纳整套 ';
+      document.getElementById('btn-reject').childNodes[0].nodeValue = isSingle ? '不采纳此图 ' : '不采纳整套 ';
+    }
+
+    function renderProgress() {
+      const states = SETS.map((_, i) => stateForIndex(i));
+      const done = states.filter(s => s.decision !== null).length;
+      document.getElementById('done-count').textContent = done;
+      document.getElementById('total-count').textContent = totalCount();
+      const status = done === totalCount() ? '✅ 已全部选择完，可以提交' : `还有 ${totalCount() - done} 个候选未选择`;
+      document.getElementById('submit-status').textContent = status;
+    }
+
+    function renderAll() {
+      syncStateWithSets();
+      renderSchemeList();
+      renderMain();
+      renderRightPanel();
+      renderProgress();
+    }
+
+    // === 交互函数 ===
+    function selectIndex(i) {
+      if (i < 0 || i >= totalCount()) return;
+      curIndex = i;
+      renderAll();
+    }
+    function decide(decision) {
+      const st = stateForIndex(curIndex);
+      st.decision = decision;
+      const next = SETS.findIndex((_, i) => i > curIndex && stateForIndex(i).decision === null);
+      if (next >= 0) selectIndex(next);
+      else renderAll();
+    }
+    function accept() { decide('accepted'); }
+    function reject() { decide('rejected'); }
+    function resetCur() {
+      Object.assign(stateForIndex(curIndex), { decision: null });
+      renderAll();
+    }
+    function resetAll() {
+      if (!confirm('清空所有选择？')) return;
+      SETS.forEach((_, i) => Object.assign(stateForIndex(i), { decision: null }));
+      curIndex = 0;
+      renderAll();
+    }
+    function showLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox').classList.add('show');
+    }
+
+    async function submitAll() {
+      const annotated = SETS.map((scheme, i) => ({
+        scheme,
+        state: stateForIndex(i),
+      }));
+      const pending = annotated.filter(item => item.state.decision === null).length;
+      if (pending > 0 && !confirm(`还有 ${pending} 个候选未选择，仍要提交吗？未选择候选不会进入交付。`)) return;
+      const accepted = annotated.filter(item => item.state.decision === 'accepted');
+      const rejected = annotated.filter(item => item.state.decision === 'rejected');
+      const pendingItems = annotated.filter(item => item.state.decision === null);
+      const result = {
+        request_id: '{{REQUEST_ID}}',
+        timestamp: new Date().toISOString(),
+        selection_summary: {
+          accepted_count: accepted.length,
+          rejected_count: rejected.length,
+          pending_count: pendingItems.length,
+          rule: '只有采纳候选进入04_交付；不采纳和未选择候选保留在03_候选。',
+        },
+        accepted_scheme_ids: accepted.map(item => item.scheme.set_id),
+        accepted_schemes: accepted.map(item => ({
+          ...item.scheme,
+          annotation: {
+            decision: item.state.decision,
+          },
+        })),
+        rejected_schemes: rejected.map(item => ({
+          ...item.scheme,
+          annotation: {
+            decision: item.state.decision,
+          },
+        })),
+        pending_scheme_ids: pendingItems.map(item => item.scheme.set_id),
+        schemes: annotated.map(item => ({
+          id: item.scheme.set_id,
+          decision: item.state.decision || 'pending',
+        })),
+      };
+      const json = JSON.stringify(result, null, 2);
+      if (submitInFlight) return;
+      submitInFlight = true;
+      const submitButton = document.getElementById('submitAllButton');
+      submitButton.disabled = true;
+      submitButton.textContent = '提交中...';
+      try {
+        const response = await fetch('/api/image-selection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: json,
+        });
+        const payload = await response.json();
+        if (payload.ok) {
+          document.getElementById('submit-status').textContent = `选择结果已保存：${payload.path}。请回到当前 AI 对话回复：好了。`;
+          alert('选择结果已保存，请回到当前 AI 对话回复：好了。');
+          return;
+        }
+        document.getElementById('submit-status').textContent = `保存失败：${payload.error || 'unknown error'}。请确认本地服务仍在运行后重试。`;
+        alert('保存失败，请确认本地服务仍在运行后重试。');
+        submitInFlight = false;
+        submitButton.disabled = false;
+        submitButton.textContent = '提交选择结果';
+      } catch (err) {
+        document.getElementById('submit-status').textContent = `保存失败：${err.message}。请确认本地服务仍在运行后重试。`;
+        alert('保存失败，请确认本地服务仍在运行后重试。');
+        submitInFlight = false;
+        submitButton.disabled = false;
+        submitButton.textContent = '提交选择结果';
+      }
+    }
+
+    function mergeIncomingSets(incoming) {
+      if (!Array.isArray(incoming)) return false;
+      const current = new Map(SETS.map(s => [s.set_id, s]));
+      let changed = false;
+      incoming.forEach(item => {
+        if (!item || !item.set_id) return;
+        const prior = current.get(item.set_id);
+        if (!prior || JSON.stringify(prior) !== JSON.stringify(item)) {
+          current.set(item.set_id, item);
+          changed = true;
+        }
+      });
+      if (!changed) return false;
+      const knownOrder = SETS.map(s => s.set_id);
+      const newIds = incoming.map(s => s.set_id).filter(id => !knownOrder.includes(id));
+      SETS = [...knownOrder, ...newIds].map(id => current.get(id)).filter(Boolean);
+      syncStateWithSets();
+      return true;
+    }
+
+    async function pollImageSets() {
+      try {
+        const response = await fetch('/api/image-sets', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (mergeIncomingSets(payload.sets)) {
+          renderAll();
+        }
+      } catch (err) {
+        // file:// or plain static server fallback.
+      }
+    }
+
+    // === 快捷键 ===
+    document.addEventListener('keydown', (e) => {
+      const key = e.key;
+      if (key === 'ArrowLeft' || key === 'k' || key === 'K') { selectIndex(curIndex - 1); e.preventDefault(); }
+      else if (key === 'ArrowRight' || key === 'j' || key === 'J') { selectIndex(curIndex + 1); e.preventDefault(); }
+      else if (key === 'y' || key === 'Y' || key === 'Enter') { accept(); e.preventDefault(); }
+      else if (key === 'n' || key === 'N') { reject(); e.preventDefault(); }
+      else if (key === 'Escape') { resetCur(); e.preventDefault(); }
+    });
+
+    document.getElementById('btn-accept').addEventListener('click', accept);
+    document.getElementById('btn-reject').addEventListener('click', reject);
+
+    // 初始渲染
+    renderAll();
+    setInterval(pollImageSets, 2500);
+  </script>
+</body>
+</html>

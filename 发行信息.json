@@ -2,10 +2,11 @@
   "schema_version": "onion_role_workspace_release_v1",
   "role": "lead",
   "repository": "onion-lead-agent",
-  "workspace_version": "0.1.21",
-  "source_revision": "02277c998353add90bc7442882126f58bf641a51",
-  "generated_at": "2026-08-31T09:06:17Z",
+  "workspace_version": "0.1.22",
+  "source_revision": "e3d5327fd5da63d4f7212bcee6a3a4c393a8d990",
+  "generated_at": "2026-09-07T09:39:52Z",
   "skills": [
+    "onion-app-image",
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
     "onion-voiceover-video-mix"
@@ -21,7 +22,9 @@
     "python_minimum": "3.10",
     "node_required": false,
     "ffmpeg_required": false,
-    "python_packages": []
+    "python_packages": [
+      "Pillow==12.3.0"
+    ]
   },
   "quick_connect": {
     "macos": "连接Agent.command",

@@ -23,10 +23,10 @@ description: 当用户已经选定并确认一条 APP 或线索正式口播文�
 - APP/线索业务身份和文案事实边界；
 - 已确认音色与配音参数；
 - 零或一条已存在前贴，或明确不使用；
-- 素材候选、稳定身份、源时间范围和可取得媒体文件；
+- 素材候选、稳定身份、SHA-256、源时间范围和可回查媒体事实；
 - 用户对 TTS、ASR、媒体处理、上传暂存等付费/外部动作的当前授权。
 
-素材搜索、稳定ID回查、短时取源、TTS、ASR和渲染都使用统一 HTTP `onion-agent` OAuth MCP；不得读取旧本地索引、腾讯 COS 或直接对象存储，不要求下游配置Mossland、Qwen或媒体服务Key。
+素材搜索、稳定ID回查、TTS、ASR和渲染都使用统一 HTTP `onion-agent` OAuth MCP；库内素材的短时取源由生成工具在服务器内按稳定SHA-256完成，业务Agent不得读取、复制或拼接签名URL。不得读取旧本地索引、腾讯 COS 或直接对象存储，不要求下游配置Mossland、Qwen或媒体服务Key。
 
 ## 固定流程
 
@@ -37,7 +37,7 @@ description: 当用户已经选定并确认一条 APP 或线索正式口播文�
 5. 按句子作用形成画面需求，固定调用`materials_search_segments(retrieval_mode=hybrid)`，从真实候选中选择配画并回查稳定身份；不读取需求报告或创意报告。MCP没有证明实际模式为hybrid时停止，不降级词法检索。
 6. 明确产品主张的句组至少有一处同名`product_feature`且画面确实展示该功能的证据镜头，其余可以使用相关学习情境。产品证据不死卡素材大类：`04_产品演示`优先，带同名功能标签并明确展示真实产品界面的`06_空镜`也可使用；不能用其他功能冒充。
 7. 生成并校验混剪计划；正文配画全部静音，前贴如有则完整播放并保留原声。
-8. 将连续镜头计划、Mossland `output_id`和可选的一条完整有声前贴源映射给`generation_render_voiceover_video`；渲染幂等Key绑定计划哈希与版本，并传当前视频版本批次的`generation_context`。服务只保留Mossland正文旁白，正文不生成、烧录或内嵌字幕；前贴完整播放且保留原声。画面不足时返回素材选择，不用黑屏、冻结帧或末帧补时；渲染状态不明时只回查原requestId，不新建火山任务。
+8. 将连续镜头计划的`source_sha256＋source_start_ms＋source_end_ms＋timeline_start_ms＋timeline_end_ms`、Mossland `output_id`和可选前贴身份映射给`generation_render_voiceover_video`；库内前贴只传稳定SHA-256，用户当前上传前贴传`output_id`，不传或复制`source_url`。生成工具在服务器内一次性取源并校验身份、HTTPS与等长区间。渲染幂等Key绑定计划哈希与版本，并传当前视频版本批次的`generation_context`。服务只保留Mossland正文旁白，正文不生成、烧录或内嵌字幕；前贴完整播放且保留原声。画面不足时返回素材选择，不用黑屏、冻结帧或末帧补时；渲染状态不明时只回查原requestId，不新建火山任务。
 9. 完成自动技术检查和人工听看；人工未通过时不得标记为正式交付。
 10. 交付本地成片和留痕，不上传广告平台、不发布。
 

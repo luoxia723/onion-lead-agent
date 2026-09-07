@@ -140,7 +140,6 @@
         "generation_upload_media",
         "materials_search_segments",
         "materials_get_segments",
-        "materials_prepare_sources",
         "generation_render_voiceover_video",
         "generation_get_operation",
         "generation_get_output"
@@ -153,7 +152,6 @@
         "materials_get_speech_master",
         "materials_search_segments",
         "materials_get_segments",
-        "materials_prepare_sources",
         "generation_upload_media",
         "generation_render_talking_head_video",
         "generation_get_operation",

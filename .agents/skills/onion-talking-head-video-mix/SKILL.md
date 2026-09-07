@@ -27,11 +27,11 @@ description: 当用户要把素材库或当前上传的真人/数字人口播母
 - 母片来源、哈希、真人/数字人类型、识别出的业务线、完整清洗文案及真实句级/词级时间轴；
 - 结尾CTA文本、时间范围、类型、兼容判断和判断依据；
 - 零或一条已存在前贴，或明确不使用；
-- 逐语义段hybrid素材候选、稳定身份、源时间范围、检索证据和媒体文件；
+- 逐语义段hybrid素材候选、稳定身份、SHA-256、源时间范围、检索证据和媒体事实；
 - 版本数量与批量主体模式；
 - 用户对 ASR、取源、渲染、上传暂存等外部/付费动作的当前授权。
 
-素材母片事实、配画搜索、稳定ID回查、短时取源、任务媒体上传和渲染都使用统一 HTTP `onion-agent` OAuth MCP；不得读取旧本地索引、腾讯 COS 或直接对象存储。用户当前上传母片先调`generation_upload_media`变成短时`output_id`，不写入素材库。
+素材母片事实、配画搜索、稳定ID回查、任务媒体上传和渲染都使用统一 HTTP `onion-agent` OAuth MCP；库内素材短时取源由生成工具在服务器内按稳定SHA-256完成，业务Agent不得读取、复制或拼接签名URL。不得读取旧本地索引、腾讯 COS 或直接对象存储。用户当前上传母片先调`generation_upload_media`变成短时`output_id`，不写入素材库。
 
 ## 固定流程
 
@@ -44,7 +44,7 @@ description: 当用户要把素材库或当前上传的真人/数字人口播母
 7. 每个配画语义段固定使用`materials_search_segments(retrieval_mode=hybrid)`；从真实候选中终选并回查素材事实，没有合格候选时保留真人。
 8. 多版本避开近期和本批重复素材，并对合理配画位置做有限差异；不能只换素材但复制完全相同的切点。
 9. 生成并校验一份完整混剪计划；业务线、母片和CTA检查直接写入计划，不额外生成入口记录。配画静音，时间范围不重叠、不越界。
-10. 将母片URL或已上传`output_id`、静音配画计划、真实字幕时间轴和可选的一条完整有声前贴映射到`generation_render_talking_head_video`；传当前任务授权、绑定计划哈希/母片哈希/版本的幂等Key，以及[统一OAuth MCP适配](../../references/http-mcp-adapter.md)要求的当前视频版本批次`generation_context`。明确终态失败只由服务器重试当前视频，状态不明时用`generation_get_operation`续查原requestId，不新建火山任务。立即下载MP4与工具返回的ASS字幕产物，分别校验SHA-256，再完成自动技术检查和人工完整听看。
+10. 素材库母片传`master_sha256`，静音配画逐条传稳定`source_sha256`及等长的真实源/目标区间；库内前贴只传稳定SHA-256，用户当前上传母片或前贴传`output_id`。不得传或复制短时`source_url`；`generation_render_talking_head_video`在服务器内一次性取源并校验身份、HTTPS与区间。传当前任务授权、绑定计划哈希/母片哈希/版本的幂等Key，以及[统一OAuth MCP适配](../../references/http-mcp-adapter.md)要求的当前视频版本批次`generation_context`。明确终态失败只由服务器重试当前视频，状态不明时用`generation_get_operation`续查原requestId，不新建火山任务。立即下载MP4与工具返回的ASS字幕产物，分别校验SHA-256，再完成自动技术检查和人工完整听看。
 11. 交付本地计划、字幕、成片和 QA；不入库、不发布、不投放。
 
 ## 核心边界

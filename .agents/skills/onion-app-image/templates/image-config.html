@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>洋葱投放图片配置 - __REQUEST_ID__</title>
+  <style>
+    :root {
+      --ink: #1e2329;
+      --body: #3f454d;
+      --muted: #7d8791;
+      --line: #dfe3e8;
+      --soft: #f6f7f9;
+      --panel: #ffffff;
+      --accent: #e8835a;
+      --accent-soft: #fff3ed;
+      --ok: #2f7d32;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      background: var(--soft);
+      color: var(--body);
+      font-size: 14px;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 22px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+    h1 { margin: 0; font-size: 18px; color: var(--ink); }
+    .request { color: var(--muted); font-size: 12px; }
+    .supportbar {
+      width: min(1280px, calc(100vw - 32px));
+      margin: 14px auto 0;
+      display: grid;
+      gap: 8px;
+    }
+    .status-strip,
+    .reference-image-note,
+    .placement-warning,
+    .diagnostics-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 10px 12px;
+    }
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      color: var(--body);
+      align-items: center;
+    }
+    .status-strip strong { color: var(--ink); }
+    .diagnostics-panel summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .diagnostics-panel pre {
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--body);
+    }
+    .reference-image-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .placement-warning {
+      display: none;
+      margin: 10px 0 12px;
+      border-color: #e7b35e;
+      background: #fff8e8;
+      color: #79510e;
+      line-height: 1.55;
+    }
+    .placement-warning.visible { display: block; }
+    main {
+      width: min(1280px, calc(100vw - 32px));
+      margin: 16px auto 96px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 16px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 15px; color: var(--ink); }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 10px;
+    }
+    .tab {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      color: var(--ink);
+      font: inherit;
+    }
+    .tab.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .option {
+      text-align: left;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      min-height: 96px;
+    }
+    .option:hover { border-color: var(--accent); }
+    .option.active { border-color: var(--accent); background: var(--accent-soft); }
+    .option.disabled { opacity: 0.48; cursor: not-allowed; background: #f1f3f5; }
+    .option.disabled:hover { border-color: var(--line); }
+    .option strong { display: block; color: var(--ink); margin-bottom: 4px; }
+    .option span { display: block; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px; color: var(--muted); font-size: 11px; }
+    label { display: block; margin: 0 0 6px; color: var(--ink); font-size: 13px; }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      font: inherit;
+      background: white;
+      color: var(--body);
+    }
+    textarea { min-height: 86px; resize: vertical; }
+    .field { margin-bottom: 16px; }
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .check-grid label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: white;
+      color: var(--body);
+    }
+    .check-grid input { width: auto; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 5px; line-height: 1.5; }
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .thumb-card {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 8px;
+      min-height: 112px;
+      padding: 8px;
+      cursor: pointer;
+      display: grid;
+      grid-template-rows: 64px auto;
+      gap: 6px;
+      align-items: center;
+      text-align: center;
+      color: var(--body);
+      font: inherit;
+    }
+    .thumb-card.active { border-color: var(--accent); background: var(--accent-soft); }
+    .thumb-card img {
+      max-width: 100%;
+      max-height: 64px;
+      object-fit: contain;
+      margin: 0 auto;
+      display: block;
+    }
+    .thumb-card .empty {
+      height: 64px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .thumb-card span {
+      font-size: 12px;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: white;
+    }
+    .switch-row input { width: auto; }
+    .summary-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .summary-list div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+    .summary-list dt { color: var(--muted); }
+    .summary-list dd { margin: 0; color: var(--ink); text-align: right; }
+    .actions {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 12px 22px;
+      background: rgba(255,255,255,0.96);
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    button.primary {
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: white;
+      border-radius: 6px;
+      padding: 10px 18px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button.secondary {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 10px 18px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .status { margin-right: auto; color: var(--muted); align-self: center; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1 id="page-title">图片生成配置</h1>
+    <span class="request">Request __REQUEST_ID__</span>
+  </div>
+  <div class="supportbar">
+    <div id="status-strip" class="status-strip"></div>
+    <details id="diagnostics-panel" class="diagnostics-panel">
+      <summary>诊断信息</summary>
+      <pre id="diagnostics-content"></pre>
+    </details>
+    <div id="reference-image-note" class="reference-image-note hidden">参考图只用于风格/版式参考，不决定本次版位。目标版位以下方选择为准。</div>
+  </div>
+  <main>
+    <section class="panel">
+      <h2>投放场景</h2>
+      <div id="category-tabs" class="tabs"></div>
+      <h2>具体版位</h2>
+      <div class="hint">单选。一次任务只选择一个具体版位；用户不选尺寸，卡片内展示目标尺寸、gpt 出图尺寸、压缩上限和一期支持状态。</div>
+      <div id="placement-warning" class="placement-warning"></div>
+      <div id="slot-grid" class="slot-grid"></div>
+    </section>
+    <aside class="panel">
+      <h2>配置</h2>
+      <div class="field">
+        <label for="deliveryName">方向名</label>
+        <input id="deliveryName" type="text" autocomplete="off" placeholder="例如：方向31">
+        <div class="hint">只填大的压缩包名称来源；系统会自动生成版位文件夹和图片名。输入“方向31.zip”也会按“方向31.zip”导出，不会重复追加后缀。</div>
+      </div>
+      <div class="field">
+        <label for="sets">图片套数</label>
+        <input id="sets" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        <div class="hint">每条文案在当前所选版位生成几套候选。手动输入，最多 50 套；整批最多 100 图组，超过请拆批。</div>
+      </div>
+      <div class="field">
+        <label>命名预览</label>
+        <div id="deliveryPreview" class="hint"></div>
+      </div>
+      <div class="field">
+        <label>Logo</label>
+        <div id="logo-grid" class="thumb-grid"></div>
+      </div>
+      <div class="field">
+        <label>IP</label>
+        <div id="ip-grid" class="thumb-grid"></div>
+        <div class="hint">选择“随机 IP”时，每个版位/每套图都由 Agent 从本地 IP 资产中重新抽取，不锁定同一个角色。</div>
+      </div>
+      <div class="field">
+        <label for="font">字体参考</label>
+        <label class="switch-row">
+          <span>启用洋葱专属字体参考</span>
+          <input id="fontEnabled" type="checkbox" checked>
+        </label>
+        <div class="hint">启用后生成时从字体参考库完全随机抽取，不需要人工选择具体哪张。</div>
+      </div>
+      <div id="ctaField" class="field hidden">
+        <label for="cta">CTA</label>
+        <input id="cta" placeholder="仅信息流填写，例如：立即体验 / 现在下载">
+      </div>
+      <div class="field">
+        <label>界面 / 功能参考图</label>
+        <label class="switch-row">
+          <span>画面需要展示洋葱 APP 界面/功能截图</span>
+          <input id="uiReferenceRequired" type="checkbox">
+        </label>
+        <div class="hint">只有最终画面里有手机、学习机或其它电子屏幕，并且屏幕要显示可识别的洋葱 APP 功能界面时才勾选。不要在 HTML 里上传；保存后请回到 Codex 上传截图。若不展示具体 UI，可不勾选并让 Agent 弱化/模糊屏幕内容。</div>
+      </div>
+      <div class="field">
+        <label for="notes">补充说明</label>
+        <textarea id="notes" placeholder="填写生图建议，例如：更像应用商店截图、不要太信息流、文字更少、人物更靠右。"></textarea>
+      </div>
+      <h2>摘要</h2>
+      <dl id="summary" class="summary-list"></dl>
+    </aside>
+  </main>
+  <div class="actions">
+    <span id="status" class="status"></span>
+    <button id="submitConfigButton" class="primary" onclick="submitConfig()">保存配置</button>
+  </div>
+  <script>
+    const DATA = __DATA_JSON__;
+    const DIAGNOSTICS = DATA.diagnostics || {};
+    const MAX_GROUP_COUNT = DATA.maxGroupCount || 100;
+    const COPY_COUNT = DATA.copyCount || 1;
+    const COPY_REFS = Array.isArray(DATA.copyRefs) ? DATA.copyRefs : [];
+    const MAX_DELIVERY_NAME_LENGTH = 120;
+    const WINDOWS_RESERVED_NAMES = new Set([
+      "CON", "PRN", "AUX", "NUL",
+      "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+      "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    ]);
+    let submitInFlight = false;
+    const state = {
+      generationMode: "explore",
+      category: DATA.desiredChannels?.[0] || DATA.categories?.[0] || DATA.slots[0]?.channel || "应用商店",
+      selectedSlotIds: [],
+      deliveryName: DATA.deliveryName || DATA.context?.delivery_name || DATA.context?.方向名 || "",
+      sets: 2,
+      logoIndex: Number.isInteger(DATA.defaultLogoIndex)
+        ? Math.min(Math.max(DATA.defaultLogoIndex, 0), Math.max(DATA.logoOptions.length - 1, 0))
+        : 0,
+      ipIndex: 0,
+      fontEnabled: true,
+      uiReferenceRequired: false,
+      cta: "",
+      notes: ""
+    };
+
+    function slotsForCategory() { return DATA.slots.filter(slot => slot.channel === state.category || slot.category === state.category); }
+    function enabledSlots() { return DATA.slots.filter(slot => slot.enabled !== false); }
+    function selectedSlots() {
+      const byId = Object.fromEntries(DATA.slots.map(slot => [slot.id, slot]));
+      state.selectedSlotIds = state.selectedSlotIds.filter(id => byId[id]?.enabled !== false);
+      return state.selectedSlotIds.map(id => byId[id]).filter(Boolean);
+    }
+    function selectedLogo() { return DATA.logoOptions[Number(state.logoIndex)] || DATA.logoOptions[0]; }
+    function selectedIp() { return DATA.ipOptions[Number(state.ipIndex)] || DATA.ipOptions[0]; }
+    function stripZipSuffix(value) { return String(value || "").trim().replace(/\.zip$/i, ""); }
+    function safeDeliveryComponent(value, fallback) {
+      let text = stripZipSuffix(value).normalize("NFC")
+        .replace(/[\\/:*?"<>|\r\n\t]+/g, "-")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^[ ._-]+|[ ._-]+$/g, "");
+      if (!text) text = fallback;
+      if (WINDOWS_RESERVED_NAMES.has(text.toUpperCase())) text = `${text}-file`;
+      if (text.length > MAX_DELIVERY_NAME_LENGTH) {
+        text = text.slice(0, MAX_DELIVERY_NAME_LENGTH).replace(/[ ._-]+$/g, "");
+      }
+      return text || fallback;
+    }
+
+    function renderStatusStrip() {
+      const summary = DIAGNOSTICS.statusSummary || {};
+      const form = summary.imageForm || DATA.desiredImageForm || "未限定";
+      const channel = summary.channel || DATA.desiredChannels?.[0] || state.category || "未限定";
+      const count = Number.isFinite(Number(summary.enabledDesiredFormCount))
+        ? Number(summary.enabledDesiredFormCount)
+        : enabledSlots().filter(slot => !DATA.desiredImageForm || slot.imageForm === DATA.desiredImageForm).length;
+      const label = form === "双图" ? "可选双图版位" : `可选${form}版位`;
+      const started = DIAGNOSTICS.startedAt || "-";
+      document.getElementById("status-strip").innerHTML = `
+        <span>当前识别：<strong>${form} · ${channel}</strong></span>
+        <span>${label}：<strong>${count}</strong> 个</span>
+        <span>Request：<strong>${DATA.request_id || "-"}</strong></span>
+        <span>启动时间：<strong>${started}</strong></span>
+      `;
+    }
+
+    function renderDiagnostics() {
+      const params = new URLSearchParams(window.location.search);
+      const payload = {
+        ...DIAGNOSTICS,
+        pageUrlRequestId: params.get("request_id") || DATA.request_id || ""
+      };
+      document.getElementById("diagnostics-content").textContent = JSON.stringify(payload, null, 2);
+    }
+
+    function renderReferenceNote() {
+      document.getElementById("reference-image-note").classList.toggle("hidden", !DIAGNOSTICS.hasReferenceImage);
+    }
+
+    function renderPlacementWarning() {
+      const warning = document.getElementById("placement-warning");
+      const desiredForm = DATA.desiredImageForm || "";
+      const categorySlots = slotsForCategory();
+      const enabledMatchingSlots = categorySlots.filter(slot => slot.enabled !== false && (!desiredForm || slot.imageForm === desiredForm));
+      let message = DIAGNOSTICS.noPlacementExplanation || "";
+      if (!message && desiredForm === "双图" && enabledMatchingSlots.length === 0) {
+        message = "当前分类下没有可选双图版位。请检查渠道、图片形式或切换到应用商店。";
+      }
+      warning.textContent = message;
+      warning.classList.toggle("visible", Boolean(message));
+    }
+
+    function renderCategories() {
+      const tabs = document.getElementById("category-tabs");
+      tabs.innerHTML = DATA.categories.map(category => `
+        <button class="tab ${category === state.category ? "active" : ""}" onclick="selectCategory('${category}')">${category}</button>
+      `).join("");
+    }
+
+    function renderSlots() {
+      const grid = document.getElementById("slot-grid");
+      const slots = slotsForCategory();
+      selectedSlots();
+      grid.innerHTML = slots.map(slot => `
+        <button class="option ${state.selectedSlotIds.includes(slot.id) ? "active" : ""} ${slot.enabled === false ? "disabled" : ""}" onclick="toggleSlot('${slot.id}')" ${slot.enabled === false ? "disabled" : ""}>
+          <strong>${slot.platform} · ${slot.name}</strong>
+          <span>${slot.sub_channel || ""}</span>
+          <span>目标 ${slot.target_size || "-"} / gpt ${slot.render_size || "-"} / &lt;${slot.maxFileSizeKb || "-"}KB</span>
+          <span>${slot.imageForm} / ${slot.directness_label || slot.directness || ""}</span>
+          ${slot.disabled_reason ? `<span>暂不可选：${slot.disabled_reason}</span>` : ""}
+          <div class="badges">
+            <span class="badge">target_size</span>
+            <span class="badge">render_size</span>
+            <span class="badge">disabled_reason</span>
+          </div>
+        </button>
+      `).join("");
+    }
+
+    function renderThumbGrid(id, values, selectedIndex, selectFn) {
+      document.getElementById(id).innerHTML = values.map((item, index) => `
+        <button class="thumb-card ${index === Number(selectedIndex) ? "active" : ""}" onclick="${selectFn}(${index})">
+          ${item.thumb ? `<img src="${item.thumb}" alt="">` : `<div class="empty">不用</div>`}
+          <span>${item.label || item.value || "未命名"}</span>
+        </button>
+      `).join("");
+    }
+
+    function renderControls() {
+      document.getElementById("page-title").textContent = "图片生成配置";
+      renderThumbGrid("logo-grid", DATA.logoOptions, state.logoIndex, "selectLogo");
+      renderThumbGrid("ip-grid", DATA.ipOptions, state.ipIndex, "selectIp");
+      document.getElementById("deliveryName").value = state.deliveryName;
+      document.getElementById("sets").value = state.sets;
+      document.getElementById("fontEnabled").checked = state.fontEnabled;
+      document.getElementById("uiReferenceRequired").checked = state.uiReferenceRequired;
+      document.getElementById("cta").value = state.cta;
+      document.getElementById("notes").value = state.notes;
+      const allowsCta = selectedSlots().some(slot => slot.cta_policy === "optional" || slot.cta_policy === "required");
+      document.getElementById("ctaField").classList.toggle("hidden", !allowsCta);
+      renderDeliveryPreview();
+    }
+
+    function renderDeliveryPreview() {
+      const preview = document.getElementById("deliveryPreview");
+      const delivery = safeDeliveryComponent(state.deliveryName, "方向名");
+      const slots = selectedSlots();
+      const setCount = Number.parseInt(state.sets || "0", 10) || 0;
+      if (!slots.length) {
+        preview.innerHTML = "将导出为：请先选择至少一个版位。";
+        return;
+      }
+      const samples = slots.slice(0, 3).map(slot => {
+        const folder = [
+          delivery,
+          safeDeliveryComponent(slot.category || slot.channel, "其他"),
+          safeDeliveryComponent(slot.platform, "通用"),
+          safeDeliveryComponent(slot.placement || slot.name, "默认版位")
+        ].join("-");
+        const count = Math.max(1, Math.min(setCount || 1, 2));
+        const files = Array.from({ length: count }, (_, index) => `${folder}/${folder}-${index + 1}.jpg`).join("<br>");
+        return files;
+      });
+      const extra = slots.length > 3 ? `<br>... 另有 ${slots.length - 3} 个版位按同一规则命名` : "";
+      preview.innerHTML = `将导出为：<br>${delivery}.zip<br>${samples.join("<br>")}${extra}`;
+    }
+
+    function renderSummary() {
+      const slots = selectedSlots();
+      const logo = selectedLogo();
+      const ip = selectedIp();
+      const delivery = safeDeliveryComponent(state.deliveryName, "未填写");
+      const estimatedGroups = COPY_COUNT * slots.length * Number.parseInt(state.sets || "0", 10);
+      const items = [
+        ["方向名", delivery],
+        ["场景", state.category],
+        ["文案数", `${COPY_COUNT} 条`],
+        ["版位", slots.length ? slots.map(slot => `${slot.platform} · ${slot.name}`).join("；") : "请先选择至少一个版位"],
+        ["尺寸", slots.length ? slots.map(slot => `${slot.target_size} ← gpt ${slot.render_size}`).join("；") : "-"],
+        ["压缩", slots.length ? slots.map(slot => slot.maxFileSizeKb ? `<${slot.maxFileSizeKb}KB` : "默认 200KB").join("；") : "-"],
+        ["Logo", logo.label],
+        ["IP", ip.random ? "随机：每张重新抽取" : ip.label],
+        ["模式", "直接生图"],
+        ["字体参考", state.fontEnabled ? "启用：每张随机抽取" : "不启用"],
+        ["屏幕界面", state.uiReferenceRequired ? "需要：保存后回到 Codex 上传截图" : "不展示可识别 UI"],
+        ["图片套数", `${state.sets} 套`],
+        ["预计图组数", slots.length ? `${COPY_COUNT} × ${slots.length} × ${state.sets || 0} = ${Number.isFinite(estimatedGroups) ? estimatedGroups : 0} / ${MAX_GROUP_COUNT}` : "-"],
+      ];
+      document.getElementById("summary").innerHTML = items.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+    }
+
+    function normalizeSetsInput(value) {
+      return String(value || "").replace(/[^\d]/g, "");
+    }
+
+    function parseSets(value) {
+      const text = normalizeSetsInput(value);
+      if (!text) throw new Error("请输入套数，范围 1-50");
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed) || String(parsed) !== text) throw new Error("套数必须是整数，范围 1-50");
+      if (parsed < 1 || parsed > 50) throw new Error("套数必须在 1-50 之间");
+      return parsed;
+    }
+
+    function handleSetsKeydown(event) {
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault();
+      }
+    }
+
+    function handleSetsWheel(event) {
+      event.preventDefault();
+    }
+
+    function selectCategory(category) {
+      if (state.category !== category) state.selectedSlotIds = [];
+      state.category = category;
+      renderAll();
+    }
+
+    function toggleSlot(id) {
+      const slot = DATA.slots.find(item => item.id === id);
+      if (!slot || slot.enabled === false) return;
+      state.selectedSlotIds = [id];
+      renderAll();
+    }
+    function selectLogo(index) { state.logoIndex = index; renderAll(); }
+    function selectIp(index) { state.ipIndex = index; renderAll(); }
+
+    function collectResult() {
+      syncState();
+      const slots = selectedSlots();
+      if (slots.length !== 1) throw new Error("请选择且仅选择一个版位");
+      const deliveryName = document.getElementById("deliveryName").value.trim();
+      if (!deliveryName) throw new Error("请填写方向名");
+      const setCount = parseSets(document.getElementById("sets").value);
+      const estimatedGroups = COPY_COUNT * slots.length * setCount;
+      if (estimatedGroups > MAX_GROUP_COUNT) {
+        throw new Error(`预计图组数超过 ${MAX_GROUP_COUNT}：${COPY_COUNT} 条文案 × ${slots.length} 个版位 × ${setCount} 套 = ${estimatedGroups}，请减少文案、版位或套数后拆批。`);
+      }
+      const slot = slots[0];
+      const logo = selectedLogo();
+      const ip = selectedIp();
+      const selectedCategories = [...new Set(slots.map(slot => slot.category || slot.channel).filter(Boolean))];
+      const selectedChannels = [...new Set(slots.map(slot => slot.channel || slot.category).filter(Boolean))];
+      const allowsCta = slots.some(slot => slot.cta_policy === "optional" || slot.cta_policy === "required");
+      return {
+        request_id: DATA.request_id,
+        type: "image_config",
+        delivery_name: deliveryName,
+        generation_mode: "explore",
+        placement_ids: slots.map(slot => slot.id),
+        placements: slots,
+        copy_count: COPY_COUNT,
+        copy_refs: COPY_REFS,
+        estimated_group_count: estimatedGroups,
+        max_group_count: MAX_GROUP_COUNT,
+        category: selectedCategories[0] || state.category,
+        categories: selectedCategories,
+        channels: selectedChannels,
+        slot_id: slot.id,
+        platform: slot.platform,
+        placement: slot.name,
+        channel: slot.channel,
+        image_form: slot.imageForm,
+        ratio: slot.target_ratio || slot.ratio,
+        target_width: slot.target_width,
+        target_height: slot.target_height,
+        target_size: slot.target_size,
+        render_width: slot.render_width,
+        render_height: slot.render_height,
+        render_size: slot.render_size,
+        target_kb: slot.maxFileSizeKb || 200,
+        sets: setCount,
+        logo: logo.value,
+        logo_asset_id: logo.asset_id,
+        logo_reference_path: logo.path,
+        ip: ip.value,
+        ip_random: Boolean(ip.random),
+        ip_asset_id: ip.asset_id,
+        ip_reference_path: ip.path,
+        font_reference_enabled: state.fontEnabled,
+        font_reference_randomized: state.fontEnabled,
+        font_prompt_rule: state.fontEnabled ? "每张图从洋葱专属字体参考中随机抽取；学习字体气质、描边和排版节奏，与当前画面融合；不要求完全一致，不复制参考图里的示例文字。" : "不启用字体参考图。",
+        cta: allowsCta ? state.cta.trim() : "",
+        screen_ui_reference_required: state.uiReferenceRequired,
+        ui_reference_required: state.uiReferenceRequired,
+        ui_reference: state.uiReferenceRequired ? "codex_upload_required" : "none",
+        ui_reference_trigger: state.uiReferenceRequired ? "recognizable_onion_app_screen" : "none",
+        ui_reference_upload_status: state.uiReferenceRequired ? "awaiting_codex_upload" : "not_required",
+        ui_reference_note: state.uiReferenceRequired
+          ? "只有画面包含可识别的手机/学习机/电子屏幕，并需要展示洋葱 APP 功能界面时才需要截图；不要在 HTML 中上传。保存配置后请回到 Codex 对话上传洋葱 APP 应用内截图。Agent 收到截图后才可进入生图流程。"
+          : "本次不展示可识别的洋葱 APP 屏幕 UI；如画面有设备屏幕，应弱化/模糊屏幕内容，不生成具体界面。",
+        ui_reference_next_action: state.uiReferenceRequired ? "请用户在 Codex 对话上传截图；收到截图前不能进入 prompt、validate-only 或 render。若用户不上传截图，只能改成弱化/模糊屏幕内容。" : "",
+        notes: state.notes.trim()
+      };
+    }
+
+    function syncState() {
+      state.deliveryName = document.getElementById("deliveryName").value;
+      state.sets = normalizeSetsInput(document.getElementById("sets").value);
+      document.getElementById("sets").value = state.sets;
+      state.fontEnabled = document.getElementById("fontEnabled").checked;
+      state.uiReferenceRequired = document.getElementById("uiReferenceRequired").checked;
+      if (!state.fontEnabled) state.fontRandomIndex = null;
+      state.cta = document.getElementById("cta").value;
+      state.notes = document.getElementById("notes").value;
+      renderSummary();
+    }
+
+    async function submitConfig() {
+      if (submitInFlight) return;
+      submitInFlight = true;
+      const button = document.getElementById("submitConfigButton");
+      button.disabled = true;
+      button.textContent = "保存中...";
+      try {
+        const response = await fetch("/api/image-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(collectResult())
+        });
+        const payload = await response.json();
+        document.getElementById("status").textContent = payload.ok
+          ? `配置已保存：${payload.path}。请回到 Codex 回复：好了。`
+          : `保存失败：${payload.error}`;
+        if (!payload.ok) {
+          submitInFlight = false;
+          button.disabled = false;
+          button.textContent = "保存配置";
+        }
+      } catch (error) {
+        document.getElementById("status").textContent = `保存失败，请确认本地服务仍在运行后重试：${error.message}`;
+        submitInFlight = false;
+        button.disabled = false;
+        button.textContent = "保存配置";
+      }
+    }
+
+    function renderAll() {
+      renderStatusStrip();
+      renderDiagnostics();
+      renderReferenceNote();
+      renderCategories();
+      renderSlots();
+      renderPlacementWarning();
+      renderControls();
+      renderSummary();
+      ["deliveryName", "sets", "fontEnabled", "uiReferenceRequired", "cta", "notes"].forEach(id => {
+        document.getElementById(id).oninput = syncState;
+        document.getElementById(id).onchange = syncState;
+      });
+      document.getElementById("sets").onkeydown = handleSetsKeydown;
+      document.getElementById("sets").onwheel = handleSetsWheel;
+    }
+    renderAll();
+  </script>
+</body>
+</html>

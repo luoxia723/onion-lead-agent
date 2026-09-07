@@ -11,7 +11,7 @@
 - 下游只在首次连接时输入管理员一对一签发的一次性激活 Token；OAuth 凭据由 Codex 保存，不进入项目仓库；
 - 不再要求下游配置情报、素材、Kimi、KIE、Mossland、Qwen ASR、TOS、数据库或 SSH 密钥。
 
-家庭网络仍通过团队代理命中正式 HTTPS 白名单。业务 Skill 不直连数据库、SSH、腾讯 COS 或火山 TOS，不改走旧本地网关。`materials_prepare_sources` 返回火山 TOS 短时读取地址；历史字段名 `cos_object_key` 只是稳定对象键的兼容名，不表示再调腾讯 COS。
+家庭网络仍通过团队代理命中正式 HTTPS 白名单。业务 Skill 不直连数据库、SSH、腾讯 COS 或火山 TOS，不改走旧本地网关。`materials_prepare_sources`仍可为明确下载任务返回火山 TOS 短时读取地址；两类视频渲染不再要求业务 Agent 调用它或复制 URL，而是把稳定 SHA-256 交给生成工具，由统一 Agent MCP 内部一次性签发新源。历史字段名 `cos_object_key` 只是稳定对象键的兼容名，不表示再调腾讯 COS。
 
 ## 工具范围
 
@@ -40,6 +40,8 @@
 - 队列或上传字节预算在供应商调用前拒绝时，复用原Key和原`generation_context`稍后重试；不得为队列满更换Key。
 - 失败或长任务可用`generation_get_operation(tool_name,idempotency_key)`回查当前逻辑状态、attempt、供应商taskId和可执行下一步；该工具不发起供应商调用。
 - 生成产物返回高熵 `output_id`、SHA-256 和短时下载地址。立即下载到当前用户产物目录并校验哈希；不把短时 URL 写成长期产物引用。
+- 视频渲染中的库内母片、前贴和镜头只传稳定 SHA-256 与真实源/目标时间范围。`master_source_url`、`front_hook_source_url`和镜头`source_url`只为旧客户端保留，服务器会忽略这些值；统一 Agent MCP 在operation登记前校验身份/真实时长，取得执行槽位后按attempt复核，并在每个未缓存素材真正取得VOD import slot时按单一稳定哈希签发最终URL。业务 Agent 不读取、复制、拼接或持久化签名 URL。
+- 素材哈希、取源返回身份、HTTPS、素材真实时长和区间长度错误在生成operation登记前停止，不创建attempt；素材 MCP 临时失败时复用原幂等 Key和相同参数重试。`rejected_before_provider`仍只表示队列、数量或预算门禁拒绝。
 - 模型、生图、配音、ASR 和自动 QA 成功不代表人工审核通过。
 
 ## 报告路由
@@ -64,11 +66,11 @@
 
 ### 纯配音混剪
 
-`generation_moss_tts` 生成最终旁白 → `generation_qwen_asr` 取真实时间轴 → `materials_search_segments(retrieval_mode=hybrid)` 批量建立候选 → `materials_get_segments` 回查稳定 ID → `materials_prepare_sources` 为终选签发短时源 → `generation_render_voiceover_video` 渲染。正文不生成、烧录或内嵌字幕；一条已有前贴可作为完整有声前置源传给同一渲染工具。
+`generation_moss_tts` 生成最终旁白 → `generation_qwen_asr` 取真实时间轴 → `materials_search_segments(retrieval_mode=hybrid)` 批量建立候选 → `materials_get_segments` 回查稳定 ID、SHA-256和源区间 → `generation_render_voiceover_video` 以稳定哈希在服务器内取源并渲染。正文不生成、烧录或内嵌字幕；一条库内前贴传稳定哈希，任务上传前贴传`output_id`。
 
 ### 口播主轴混剪
 
-`materials_search_speech_masters(business_line=app|lead)` → `materials_get_speech_master(expected_business_line=同一值)` → `materials_prepare_sources` 取母片；静音配画按与纯配音相同的 `hybrid` 路由选择和回查。完整计划通过 `generation_render_talking_head_video` 渲染，可同时传真实字幕时间轴和一条完整有声前贴；工具返回 MP4 和 ASS 字幕产物。对应业务线母片为 0 时停止素材库流程，不跨业务线借母片。
+`materials_search_speech_masters(business_line=app|lead)` → `materials_get_speech_master(expected_business_line=同一值)` 回查母片稳定 SHA-256、业务事实与时间轴；静音配画按与纯配音相同的 `hybrid` 路由选择和回查。完整计划通过 `generation_render_talking_head_video` 传母片/配画稳定哈希，由服务器内部取源后渲染；用户上传母片或前贴仍传`output_id`。工具返回 MP4 和 ASS 字幕产物。对应业务线母片为 0 时停止素材库流程，不跨业务线借母片。
 
 ### APP 图片
 

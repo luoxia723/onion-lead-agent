@@ -5,10 +5,12 @@
   "repository": "onion-lead-agent",
   "skills": [
     "Skills/03_内容生成相关/onion-lead-video-copy",
+    "Skills/03_内容生成相关/onion-app-image",
     "Skills/03_内容生成相关/onion-voiceover-video-mix",
     "Skills/03_内容生成相关/onion-talking-head-video-mix"
   ],
   "resolved_skill_names": [
+    "onion-app-image",
     "onion-lead-video-copy",
     "onion-talking-head-video-mix",
     "onion-voiceover-video-mix"
