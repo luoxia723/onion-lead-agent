@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.22`，来源提交 `e3d5327fd5da63d4f7212bcee6a3a4c393a8d990`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.23`，来源提交 `5b93ab06efd8a300caa1ead18b2eb57bcf3f180f`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
@@ -41,6 +41,7 @@
 - `04_交付`只放正式可采用文件，文件名必须包含业务主题、产物名称和`vNNN`，不以机器ID开头；
 - `05_质检`保存自动与人工审核，`06_打包`保存ZIP及交付清单；
 - `.runtime/<任务ID>/`只放短时下载、模型批次和可重建缓存，不得作为正式交付；
+- 统一Agent返回短时产物时，必须把结构化响应中的`download_url`原值交给`scripts/download_agent_output.py`，同时传`byte_count`、`sha256`和可选`mime_type`；不得手抄`output_id`重建链接、使用浏览器/Web抓取或给公开下载请求附加OAuth。脚本校验通过后才能进入下一阶段；错误处理读取当前Skill引用的HTTP MCP适配合同；
 - 完成后运行`finalize`和`validate`。Markdown会检查文内锚点、相对文档和工作台URL；正式报告含工作台链接时还必须运行`check-links --online-workbench`核对详情API身份。用户要求ZIP时运行`package`；APP图片专用打包仍可使用图片Skill脚本，但输出名、目录和ZIP内`交付清单.json`必须符合统一合同。
 
 ## 首次初始化

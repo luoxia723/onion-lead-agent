@@ -39,7 +39,8 @@
 - `idempotency_key` 绑定逻辑产物、工具、输入指纹和用户意图，不绑定供应商attempt。明确终态失败只由服务器重试当前逻辑项，最多3个attempt；成功项不重跑。已知taskId只续查原任务；状态不明时停止新建。用户明确修改输入或要求新版才创建新逻辑身份。
 - 队列或上传字节预算在供应商调用前拒绝时，复用原Key和原`generation_context`稍后重试；不得为队列满更换Key。
 - 失败或长任务可用`generation_get_operation(tool_name,idempotency_key)`回查当前逻辑状态、attempt、供应商taskId和可执行下一步；该工具不发起供应商调用。
-- 生成产物返回高熵 `output_id`、SHA-256 和短时下载地址。立即下载到当前用户产物目录并校验哈希；不把短时 URL 写成长期产物引用。
+- 生成产物返回高熵 `output_id`、`byte_count`、SHA-256、MIME 类型和短时下载地址。把工具响应中的`download_url`原值交给角色项目公共脚本`python scripts/download_agent_output.py --url <download_url> --output <目标文件> --sha256 <sha256> --byte-count <byte_count> --mime-type <mime_type>`，立即下载到当前任务约定目录；不得从`output_id`手工重建或转写 URL，也不得改用浏览器/Web抓取、MCP OAuth请求或自行编写下载命令。脚本只接受已登记的`https://intel-mcp.guanghexinzhi.cn/agent/outputs/<高熵ID>`，普通GET不携带OAuth，原子落盘并校验大小、类型和哈希；目标已存在时停止而不覆盖。短时 URL 不写入任务清单、回执或长期产物引用。
+- 公共下载脚本返回`output_not_found_or_expired`时，保留原`output_id`和原幂等Key，先用`generation_get_output`回查；不得直接创建新Key重复付费生成。返回`download_access_denied`不代表MCP OAuth失效，不重新Authenticate；保留错误码交给维护者检查公开产物路由。`invalid_download_url`、`invalid_download_redirect`、`byte_count_mismatch`、`sha256_mismatch`或`mime_type_mismatch`均失败关闭，不继续ASR、渲染、人工审核或正式交付。
 - 视频渲染中的库内母片、前贴和镜头只传稳定 SHA-256 与真实源/目标时间范围。`master_source_url`、`front_hook_source_url`和镜头`source_url`只为旧客户端保留，服务器会忽略这些值；统一 Agent MCP 在operation登记前校验身份/真实时长，取得执行槽位后按attempt复核，并在每个未缓存素材真正取得VOD import slot时按单一稳定哈希签发最终URL。业务 Agent 不读取、复制、拼接或持久化签名 URL。
 - 素材哈希、取源返回身份、HTTPS、素材真实时长和区间长度错误在生成operation登记前停止，不创建attempt；素材 MCP 临时失败时复用原幂等 Key和相同参数重试。`rejected_before_provider`仍只表示队列、数量或预算门禁拒绝。
 - 模型、生图、配音、ASR 和自动 QA 成功不代表人工审核通过。

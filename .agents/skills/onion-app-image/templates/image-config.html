@@ -292,8 +292,12 @@
     <section class="panel">
       <h2>投放场景</h2>
       <div id="category-tabs" class="tabs"></div>
+      <div id="platform-picker" class="hidden">
+        <h2>应用商店平台</h2>
+        <div id="platform-tabs" class="tabs"></div>
+      </div>
       <h2>具体版位</h2>
-      <div class="hint">单选。一次任务只选择一个具体版位；用户不选尺寸，卡片内展示目标尺寸、gpt 出图尺寸、压缩上限和一期支持状态。</div>
+      <div class="hint">单选。先选择平台，再选择版位；尺寸和压缩上限按所选版位自动处理。</div>
       <div id="placement-warning" class="placement-warning"></div>
       <div id="slot-grid" class="slot-grid"></div>
     </section>
@@ -371,6 +375,7 @@
       generationMode: "explore",
       category: DATA.desiredChannels?.[0] || DATA.categories?.[0] || DATA.slots[0]?.channel || "应用商店",
       selectedSlotIds: [],
+      platform: "",
       deliveryName: DATA.deliveryName || DATA.context?.delivery_name || DATA.context?.方向名 || "",
       sets: 2,
       logoIndex: Number.isInteger(DATA.defaultLogoIndex)
@@ -457,22 +462,43 @@
       `).join("");
     }
 
+    function renderPlatforms() {
+      const isAppStore = state.category === "应用商店";
+      document.getElementById("platform-picker").classList.toggle("hidden", !isAppStore);
+      if (!isAppStore) return;
+      const slots = slotsForCategory();
+      const platforms = [...new Set(slots.map(slot => slot.platform))];
+      if (!platforms.includes(state.platform)) {
+        state.platform = (slots.find(slot => slot.enabled !== false) || slots[0])?.platform || "";
+      }
+      document.getElementById("platform-tabs").innerHTML = platforms.map(platform => `
+        <button class="tab ${platform === state.platform ? "active" : ""}" onclick="selectPlatform('${platform}')">${platform}</button>
+      `).join("");
+    }
+
+    function selectPlatform(platform) {
+      if (state.platform !== platform) state.selectedSlotIds = [];
+      state.platform = platform;
+      renderAll();
+    }
+
     function renderSlots() {
       const grid = document.getElementById("slot-grid");
-      const slots = slotsForCategory();
+      const isAppStore = state.category === "应用商店";
+      const slots = slotsForCategory().filter(slot => !isAppStore || slot.platform === state.platform);
       selectedSlots();
       grid.innerHTML = slots.map(slot => `
         <button class="option ${state.selectedSlotIds.includes(slot.id) ? "active" : ""} ${slot.enabled === false ? "disabled" : ""}" onclick="toggleSlot('${slot.id}')" ${slot.enabled === false ? "disabled" : ""}>
-          <strong>${slot.platform} · ${slot.name}</strong>
+          <strong>${isAppStore ? slot.name : `${slot.platform} · ${slot.name}`}</strong>
+          ${isAppStore ? `
+          <span>每套 ${slot.image_count} 张 · 每张 ${slot.target_size}</span>
+          <span>${slot.maxFileSizeKb ? `每张 &lt;${slot.maxFileSizeKb}KB` : "每张默认 200KB"} · JPG</span>
+          ` : `
           <span>${slot.sub_channel || ""}</span>
           <span>目标 ${slot.target_size || "-"} / gpt ${slot.render_size || "-"} / &lt;${slot.maxFileSizeKb || "-"}KB</span>
           <span>${slot.imageForm} / ${slot.directness_label || slot.directness || ""}</span>
+          `}
           ${slot.disabled_reason ? `<span>暂不可选：${slot.disabled_reason}</span>` : ""}
-          <div class="badges">
-            <span class="badge">target_size</span>
-            <span class="badge">render_size</span>
-            <span class="badge">disabled_reason</span>
-          </div>
         </button>
       `).join("");
     }
@@ -536,7 +562,7 @@
         ["场景", state.category],
         ["文案数", `${COPY_COUNT} 条`],
         ["版位", slots.length ? slots.map(slot => `${slot.platform} · ${slot.name}`).join("；") : "请先选择至少一个版位"],
-        ["尺寸", slots.length ? slots.map(slot => `${slot.target_size} ← gpt ${slot.render_size}`).join("；") : "-"],
+        ["尺寸", slots.length ? slots.map(slot => state.category === "应用商店" ? slot.target_size : `${slot.target_size} ← gpt ${slot.render_size}`).join("；") : "-"],
         ["压缩", slots.length ? slots.map(slot => slot.maxFileSizeKb ? `<${slot.maxFileSizeKb}KB` : "默认 200KB").join("；") : "-"],
         ["Logo", logo.label],
         ["IP", ip.random ? "随机：每张重新抽取" : ip.label],
@@ -544,6 +570,7 @@
         ["字体参考", state.fontEnabled ? "启用：每张随机抽取" : "不启用"],
         ["屏幕界面", state.uiReferenceRequired ? "需要：保存后回到 Codex 上传截图" : "不展示可识别 UI"],
         ["图片套数", `${state.sets} 套`],
+        ["图片总数", slots.length ? `每套 ${slots[0].image_count} 张 × ${state.sets || 0} 套${COPY_COUNT > 1 ? ` × ${COPY_COUNT} 条文案` : ""} = 共 ${estimatedGroups * slots[0].image_count || 0} 张` : "-"],
         ["预计图组数", slots.length ? `${COPY_COUNT} × ${slots.length} × ${state.sets || 0} = ${Number.isFinite(estimatedGroups) ? estimatedGroups : 0} / ${MAX_GROUP_COUNT}` : "-"],
       ];
       document.getElementById("summary").innerHTML = items.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
@@ -573,7 +600,10 @@
     }
 
     function selectCategory(category) {
-      if (state.category !== category) state.selectedSlotIds = [];
+      if (state.category !== category) {
+        state.selectedSlotIds = [];
+        state.platform = "";
+      }
       state.category = category;
       renderAll();
     }
@@ -702,6 +732,7 @@
       renderDiagnostics();
       renderReferenceNote();
       renderCategories();
+      renderPlatforms();
       renderSlots();
       renderPlacementWarning();
       renderControls();

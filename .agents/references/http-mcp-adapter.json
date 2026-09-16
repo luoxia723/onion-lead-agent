@@ -82,7 +82,23 @@
     "known_provider_task_is_queried_not_recreated": true,
     "unknown_provider_state_forbids_new_attempt": true,
     "new_key_requires_deliberate_new_user_intent": true,
-    "outputs_are_short_lived_and_sha256_verified": true
+    "outputs_are_short_lived_and_sha256_verified": true,
+    "output_download": {
+      "script": "scripts/download_agent_output.py",
+      "allowed_origin": "https://intel-mcp.guanghexinzhi.cn",
+      "path_prefix": "/agent/outputs/",
+      "authorization_header": "forbidden",
+      "required_receipt_fields": [
+        "download_url",
+        "byte_count",
+        "sha256"
+      ],
+      "optional_receipt_fields": [
+        "mime_type"
+      ],
+      "overwrite": "forbidden",
+      "write_mode": "atomic"
+    }
   },
   "skill_routes": {
     "onion-demand-report": {
