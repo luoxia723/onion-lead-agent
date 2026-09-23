@@ -10,6 +10,9 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Callable
 import urllib.error
 import urllib.request
@@ -23,9 +26,18 @@ CHUNK_SIZE = 1024 * 1024
 
 
 class DownloadError(RuntimeError):
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        retry_after: float | None = None,
+        transient: bool = False,
+    ) -> None:
         super().__init__(message)
         self.code = code
+        self.retry_after = retry_after
+        self.transient = transient
 
 
 def validate_download_url(url: str, *, error_code: str) -> None:
@@ -58,7 +70,7 @@ def normalized_mime_type(value: str | None) -> str:
     return str(value or "").split(";", 1)[0].strip().lower()
 
 
-def download_agent_output(
+def _download_once(
     *,
     url: str,
     output: Path,
@@ -103,10 +115,14 @@ def download_agent_output(
                 "output_not_found_or_expired",
                 "产物不存在或短时地址已过期；不要用新幂等键重复付费生成",
             ) from error
-        raise DownloadError(
-            "download_http_error",
-            f"下载入口返回 HTTP {error.code}",
-        ) from error
+        if error.code == 429 or 500 <= error.code <= 599:
+            raise DownloadError(
+                "download_http_error",
+                f"下载入口返回 HTTP {error.code}",
+                retry_after=parse_retry_after((error.headers or {}).get("Retry-After")),
+                transient=True,
+            ) from error
+        raise DownloadError("download_http_error", f"下载入口返回 HTTP {error.code}") from error
     except (OSError, urllib.error.URLError, TimeoutError) as error:
         raise DownloadError("download_network_error", "下载请求未完成") from error
 
@@ -202,6 +218,71 @@ def download_agent_output(
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
+
+
+def parse_retry_after(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value.strip()))
+    except ValueError:
+        try:
+            date = parsedate_to_datetime(value)
+            if date.tzinfo is None:
+                date = date.replace(tzinfo=timezone.utc)
+            return max(0.0, (date - datetime.now(timezone.utc)).total_seconds())
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+
+def download_agent_output(
+    *,
+    url: str,
+    output: Path,
+    expected_sha256: str,
+    expected_byte_count: int,
+    expected_mime_type: str | None = None,
+    timeout_seconds: int = 300,
+    open_request: Callable[..., Any] = urllib.request.urlopen,
+    max_attempts: int = 3,
+    max_retry_wait_seconds: float = 60,
+    sleep: Callable[[float], None] = time.sleep,
+) -> dict[str, Any]:
+    """Retry only transient transport failures; integrity and permanent errors fail closed."""
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be at least 1")
+    if max_retry_wait_seconds < 0:
+        raise ValueError("max_retry_wait_seconds must not be negative")
+    waited_seconds = 0.0
+    for attempt in range(max_attempts):
+        try:
+            return _download_once(
+                url=url,
+                output=output,
+                expected_sha256=expected_sha256,
+                expected_byte_count=expected_byte_count,
+                expected_mime_type=expected_mime_type,
+                timeout_seconds=timeout_seconds,
+                open_request=open_request,
+            )
+        except DownloadError as error:
+            retryable = error.code == "download_network_error" or (
+                error.code == "download_http_error" and error.retry_after is not None
+            )
+            retryable = retryable or error.transient
+            if not retryable or attempt + 1 >= max_attempts:
+                raise
+            delay = error.retry_after if error.retry_after is not None else min(2**attempt, 8)
+            if delay > max_retry_wait_seconds - waited_seconds:
+                raise DownloadError(
+                    error.code,
+                    f"{error}; Retry-After exceeds the {max_retry_wait_seconds:g}s retry wait budget",
+                    retry_after=error.retry_after,
+                    transient=error.transient,
+                ) from error
+            sleep(delay)
+            waited_seconds += delay
+    raise AssertionError("unreachable")
 
 
 def parse_args() -> argparse.Namespace:

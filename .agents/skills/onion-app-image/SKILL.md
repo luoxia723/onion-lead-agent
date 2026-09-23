@@ -49,6 +49,10 @@ description: 当用户已经确认 APP 图片文案并要求生成信息流、�
 9. 用户结合候选图和检查提示直接选择“采纳”或“不采纳”，两种决定都不要求填写理由或反馈。选择结果保存后直接运行`scripts/prepare_accepted_deliveries.py`，一次读取全部`accepted_schemes`，使用本地Pillow按已保存版位的精确尺寸和KB上限生成JPEG、校验并写入`04_交付`与`05_质检`；零采纳同样正常完成，本地处理不按图片数再次向用户授权。用户明确要求打包时，才把交付规格质检结果传给`scripts/package_accepted_images.py --delivery-result <路径>`，生成ZIP和交付清单到`06_打包`。
 10. 任务根目录、版本、文件名和包名由`scripts/artifact_workspace.py`创建与校验；`.runtime/<任务ID>/`只保存可重建过程文件，不上传广告平台、不发布。
 
+## 中断恢复
+
+暂时网络错误只重试当前阶段的原工具调用，沿用原输入、幂等Key和`generation_context`；从任务记录中最后一个已校验的阶段输出继续，复用已有上传、时间轴、素材选择及成功产物，不重跑整个 Skill。超时或状态不明时用原工具名和原Key调用`generation_get_operation`；该工具只读查询，不会恢复执行。恢复时只推进原来已授权的逻辑项。下载地址过期时用`generation_get_output`按原`output_id`取新地址后下载，不重新生成；查询确认产物数据已清理时如实停止。细节见[统一 OAuth MCP 适配](../../references/http-mcp-adapter.md)。
+
 ## 核心边界
 
 - 文案必须逐字使用确认稿，生图模型不能改写产品事实或 CTA。

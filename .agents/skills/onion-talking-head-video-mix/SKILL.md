@@ -47,6 +47,10 @@ description: 当用户要把素材库或当前上传的真人/数字人口播母
 10. 素材库母片传`master_sha256`，静音配画逐条传稳定`source_sha256`及等长的真实源/目标区间；库内前贴只传稳定SHA-256，用户当前上传母片或前贴传`output_id`。不得传或复制短时`source_url`；`generation_render_talking_head_video`在服务器内一次性取源并校验身份、HTTPS与区间。传当前任务授权、绑定计划哈希/母片哈希/版本的幂等Key，以及[统一OAuth MCP适配](../../references/http-mcp-adapter.md)要求的当前视频版本批次`generation_context`。明确终态失败只由服务器重试当前视频，状态不明时用`generation_get_operation`续查原requestId，不新建火山任务。立即下载MP4与工具返回的ASS字幕产物，分别校验SHA-256，再完成自动技术检查和人工完整听看。
 11. 交付本地计划、字幕、成片和 QA；不入库、不发布、不投放。
 
+## 中断恢复
+
+暂时网络错误只重试当前阶段的原工具调用，沿用原输入、幂等Key和`generation_context`；从任务记录中最后一个已校验的阶段输出继续，复用已有上传、时间轴、素材选择及成功产物，不重跑整个 Skill。超时或状态不明时用原工具名和原Key调用`generation_get_operation`；该工具只读查询，不会恢复执行。恢复时只推进原来已授权的逻辑项。下载地址过期时用`generation_get_output`按原`output_id`取新地址后下载，不重新生成；查询确认产物数据已清理时如实停止。细节见[统一 OAuth MCP 适配](../../references/http-mcp-adapter.md)。
+
 ## 核心边界
 
 - APP 与线索共用同一个 Skill；差异只体现在`business_line`、母片业务标签和CTA兼容判断。

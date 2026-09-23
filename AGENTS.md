@@ -2,7 +2,7 @@
 
 ## 项目身份
 
-本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.23`，来源提交 `5b93ab06efd8a300caa1ead18b2eb57bcf3f180f`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
+本仓库是由投放AI内容自动化主仓库自动生成的 `lead` 角色工作区。发行版本 `0.1.24`，来源提交 `c5b30f273f90d08bd94d97b06ffc2d07f38f8be4`。本仓库不是Skill源码owner；`AGENTS.md`、`README.md`、`首次使用.md`、`.agents/`、`产品资料/`、`.codex/`、`scripts/`和发行清单只能通过上游自动更新，不在本仓库手工修改。
 
 ## 角色职责
 
